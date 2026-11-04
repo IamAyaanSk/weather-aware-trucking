@@ -88,7 +88,7 @@ def custom_exception_handler(exc: Exception, context: dict[str, Any]) -> Respons
             }
         }
         return response
-    
+
     logger.exception(
         'Unhandled exception occurred while processing request', exc_info=exc
     )

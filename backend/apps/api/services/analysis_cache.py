@@ -45,7 +45,7 @@ def compute_request_hash(normalized_request: dict[str, Any]) -> str:
 
 def get_cached_analysis(client_id: str, request_hash: str) -> RouteAnalysis | None:
     """Look up latest analysis for this client and hash within the TTL window (default 1h)."""
-    
+
     ttl_seconds = getattr(settings, 'PLAN_CACHE_TTL_SECONDS', 3600)
     cutoff = timezone.now() - timedelta(seconds=ttl_seconds)
 

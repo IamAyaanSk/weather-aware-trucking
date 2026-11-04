@@ -1,2 +1,2 @@
 def main() -> None:
-    print("Hello from backend!")
+    print('Hello from backend!')

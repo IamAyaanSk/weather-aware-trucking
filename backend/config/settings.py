@@ -166,3 +166,18 @@ HTTP_TIMEOUT_SECONDS = float(os.getenv('HTTP_TIMEOUT_SECONDS', '15'))
 PLAN_CACHE_TTL_SECONDS = int(os.getenv('PLAN_CACHE_TTL_SECONDS', '3600'))
 PLAN_CACHE_VERSION = os.getenv('PLAN_CACHE_VERSION', 'v1')
 TRUCK_PROFILE_VERSION = os.getenv('TRUCK_PROFILE_VERSION', 'v1')
+
+# Mapbox Directions API settings
+MAPBOX_ACCESS_TOKEN = os.getenv('MAPBOX_ACCESS_TOKEN', '')
+MAPBOX_DIRECTIONS_BASE_URL = os.getenv(
+    'MAPBOX_DIRECTIONS_BASE_URL', 'https://api.mapbox.com/directions/v5'
+)
+MAPBOX_PROFILE = os.getenv('MAPBOX_PROFILE', 'driving-traffic')
+MAPBOX_LANGUAGE = os.getenv('MAPBOX_LANGUAGE', 'en')
+
+# Truck vehicle profile defaults
+TRUCK_HEIGHT_MM = int(os.getenv('TRUCK_HEIGHT_MM', '4114'))
+TRUCK_WIDTH_MM = int(os.getenv('TRUCK_WIDTH_MM', '2590'))
+TRUCK_LENGTH_MM = int(os.getenv('TRUCK_LENGTH_MM', '21945'))
+TRUCK_AXLE_COUNT = int(os.getenv('TRUCK_AXLE_COUNT', '5'))
+TRUCK_TARE_WEIGHT_LBS = int(os.getenv('TRUCK_TARE_WEIGHT_LBS', '30000'))
