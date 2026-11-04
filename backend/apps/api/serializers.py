@@ -95,6 +95,7 @@ class PlanRequestSerializer(serializers.Serializer):
 
         return attrs
 
+
 # Mapbox serializers
 class MapboxLegSerializer(serializers.Serializer):
     """Serializer for individual leg summaries in a route."""
@@ -142,18 +143,14 @@ class MapboxDirectionsResponseSerializer(serializers.Serializer):
 class MapboxLegSerializer(serializers.Serializer):
     """Serializer for individual leg summaries in a route."""
 
-    summary = serializers.CharField(
-        required=False, allow_null=True, allow_blank=True
-    )
+    summary = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
 
 class MapboxRouteSerializer(serializers.Serializer):
     """Serializer for route fields we care about."""
 
     distance = serializers.FloatField(min_value=0.0)
-    duration = serializers.FloatField(
-        required=False, allow_null=True, min_value=0.0
-    )
+    duration = serializers.FloatField(required=False, allow_null=True, min_value=0.0)
     duration_typical = serializers.FloatField(
         required=False, allow_null=True, min_value=0.0
     )

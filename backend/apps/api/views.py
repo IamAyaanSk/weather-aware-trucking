@@ -58,5 +58,5 @@ def plan_route(request: Request) -> Response:
             departure_time=validated_data['departure_time'],
             load_weight_lbs=validated_data['load_weight_lbs'],
         )
-        
+
         return Response(routes_data, status=status.HTTP_200_OK)

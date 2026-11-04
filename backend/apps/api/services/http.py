@@ -29,7 +29,7 @@ def request_with_retry(
 ) -> httpx.Response:
     """Execute an HTTP request with bounded retry for transient failures (429, 5xx, timeouts).
 
-    Fails immediately without retrying on client/auth errors (401, 403, 4xx).    
+    Fails immediately without retrying on client/auth errors (401, 403, 4xx).
     """
     request_timeout = (
         timeout

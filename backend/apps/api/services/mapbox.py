@@ -46,8 +46,6 @@ def validate_mapbox_response(raw_data: Any) -> MapboxResponseData:
     return serializer.validated_data
 
 
-
-
 def calculate_truck_dimensions(
     load_weight_lbs: int,
 ) -> tuple[float, float, float]:
@@ -150,7 +148,6 @@ def fetch_mapbox_routes(
                 'message': 'There are less than 3 routes to reach your destination.',
             }
         )
-
 
     parsed_routes: list[ParsedRoute] = []
 

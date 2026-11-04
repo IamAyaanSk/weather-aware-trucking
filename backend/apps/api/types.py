@@ -53,4 +53,3 @@ class MapboxRoutesResult(TypedDict):
     snapped_origin: SnappedCoordinate
     snapped_destination: SnappedCoordinate
     warnings: list[RouteWarning]
-
