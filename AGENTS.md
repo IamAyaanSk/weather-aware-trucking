@@ -8,7 +8,7 @@
 ## Agent quick start
 
 1. §5 (API) and §6 (risk/route math) are normative.
-2. Never call Google or Open-Meteo from unit tests. Use fixtures/mocks.
+2. Never call Mapbox or Open-Meteo from unit tests. Use fixtures/mocks.
 3. Run backend `ruff`/tests and frontend `oxlint`/`oxfmt`/`typecheck` before committing.
 4. Update this file when contracts, architecture, or domain rules change.
 5. Keep the implementation simple and non-repetitive. Prefer one clear code path over abstractions for hypothetical needs.
@@ -19,7 +19,7 @@
 
 The user enters origin, destination, departure time, load weight (lbs), and a sampling interval (10, 25, or 50 miles). The app:
 
-1. Gets up to 3 truck routes from Google Routes API.
+1. Resolves origin and destination coordinates via a 2-step search in UI (user searches and presses Enter -> gets recommendations -> selects to retrieve coordinates), then sends coordinates to backend to get up to 3 truck routes from the Mapbox Directions API.
 2. Samples each route every _N_ miles.
 3. Gets hourly weather for every checkpoint from Open-Meteo.
 4. Scores each checkpoint with the given wind/rain/snow/load rules.
@@ -59,12 +59,13 @@ Correctness and clarity over extra features.
 
 ### Backend
 
-- Django **6.1.3**, DRF **3.18.3**, `django-cors-headers`, `httpx`, `geopy`, `polyline`, `python-dotenv`.
-- Python **3.15**, uv, Ruff, pytest + pytest-django, SQLite.
-- M0 wired: `apps/__init__.py` exists, `ApiConfig.name = "apps.api"`, DRF + CORS + `apps.api` are registered, settings are env-driven, and `/api/v1/health/` is served.
+- Django **6.1.3**, DRF **3.18.3**, `django-cors-headers`, `python-dotenv` installed. `httpx`, `geopy`, and `polyline` are not installed yet (M2/M3).
+- Python **3.15**, uv, Ruff, SQLite. `pytest`/`pytest-django` are not installed yet; tests are deferred.
+- M0 complete: `apps/__init__.py` exists, `ApiConfig.name = "apps.api"`, DRF + CORS + `apps.api` are registered, settings are env-driven, and `/api/v1/health/` is served.
 - `config/urls.py` mounts `apps.api.urls` at `/api/v1/`; `/admin/` keeps CSRF.
-- Public API views use `authentication_classes = []` and `AllowAny`; anonymous throttling defaults to `120/min`.
-- `apps/api/tests/` is a package (health + CORS preflight tests); no serializers, services, domain layer, `RouteAnalysis` model, or plan endpoints yet. `views.py`/`models.py` are still scaffolds.
+- The public health view uses `authentication_classes = []` and `AllowAny`; anonymous throttling defaults to `120/min`; CORS allows the `x-client-id` header.
+- `RouteAnalysis` and its initial migration are implemented. No serializers, services, domain layer, or plan/history endpoints yet; `views.py` only serves health.
+- `apps/api/tests/` exists but is empty. No tests are checked in; testing is deferred until a dedicated pass.
 
 ### Frontend
 
@@ -73,7 +74,7 @@ Correctness and clarity over extra features.
 - `src/App.tsx` is a placeholder (`<h1>Hello</h1>`).
 - No Leaflet, heatmap, polyline, form, data-fetching, or test dependencies.
 
-**Everything below is the target design, not implemented yet. Current milestone: M1.**
+**Everything below is the target design except the implemented M0 scaffold and the `RouteAnalysis` model/migration. Current milestone: M1.**
 
 ---
 
@@ -81,28 +82,34 @@ Correctness and clarity over extra features.
 
 ```text
 React + Vite + Leaflet
-  │  POST /api/v1/routes/plan/
-  │  GET  /api/v1/analyses/
-  │  GET  /api/v1/analyses/{id}/
+  │  1. Search location (press Enter) -> get recommendations (Mapbox Search Box API via public token)
+  │  2. Select recommendation -> retrieve coords (Mapbox Search Box API via public token)
+  │  3. POST /api/v1/routes/plan/ (with origin & destination coordinates)
+  │  4. GET  /api/v1/analyses/
+  │  5. GET  /api/v1/analyses/{id}/
   ▼
 Django + DRF
-  ├── thin view + serializer
-  ├── services/: Google Routes, Open-Meteo
+  ├── thin view + serializer (validates coordinates, weight, departure, interval)
+  ├── services/: Mapbox Directions, Open-Meteo
   ├── domain/: geo, risk, checkpoint, ranking, heatmap
   └── SQLite/Postgres: RouteAnalysis history + 1h reuse
          │
-         ├──► Google Routes API (TRUCK, traffic-aware)
+         ├──► Mapbox Directions API (driving-traffic + vehicle limits using coordinates)
          └──► Open-Meteo API
 ```
 
 ### Rules
 
 - The calculation is request-scoped; the only persistence is the `RouteAnalysis` record.
-- Keys stay server-side. Never expose `GOOGLE_MAPS_API_KEY` to Vite.
+- Location search is handled directly in frontend using a public Mapbox token (`VITE_MAPBOX_PUBLIC_TOKEN`), resolving coordinates before calling the backend.
+- Coordinates are passed directly to `POST /api/v1/routes/plan/`. Backend does not run geocoding inside the routing pipeline; it sends coordinates straight to Mapbox Directions.
+- Secret keys stay server-side: the backend `MAPBOX_ACCESS_TOKEN` is used exclusively for Directions and is never exposed to Vite.
 - Views validate and delegate. No risk math or upstream calls in `views.py`.
 - `domain/` is pure Python: no Django, DRF, `httpx`, or settings imports.
 - Fail closed if required weather is missing. Never assume calm weather.
-- No silent fallback from truck routing to car routing. Fallback must be explicit config.
+- Mapbox has no dedicated truck profile. Truck limits ride on the `driving-traffic` profile via
+  `max_height`/`max_width`/`max_weight`; that is a documented v1 approximation, not true truck
+  routing. Surface it with a `truck_restrictions_unsupported` warning rather than pretending.
 
 ---
 
@@ -128,7 +135,7 @@ backend/
 │       │   ├── heatmap.py
 │       │   └── planner.py
 │       ├── services/
-│       │   ├── google_routes.py
+│       │   ├── mapbox.py            # Directions API
 │       │   ├── open_meteo.py
 │       │   └── http.py
 │       ├── migrations/
@@ -184,8 +191,16 @@ No authentication. History is scoped by an anonymous `X-Client-Id` header (UUID 
 
 ```json
 {
-  "origin": "Chicago, IL",
-  "destination": "Denver, CO",
+  "origin": {
+    "name": "Chicago, IL",
+    "lat": 41.8781,
+    "lng": -87.6298
+  },
+  "destination": {
+    "name": "Denver, CO",
+    "lat": 39.7392,
+    "lng": -104.9903
+  },
   "departure_time": "2026-11-04T14:00:00Z",
   "load_weight_lbs": 35000,
   "sample_interval_miles": 25
@@ -195,8 +210,8 @@ No authentication. History is scoped by an anonymous `X-Client-Id` header (UUID 
 - `departure_time`: ISO 8601 with offset. Normalize to UTC internally.
 - `sample_interval_miles`: `10`, `25`, or `50`.
 - `load_weight_lbs`: integer, `>= 0`; sanity upper bound documented in serializer.
-- `origin`/`destination`: non-empty strings. Google Routes handles address waypoints. Photon/autocomplete is deferred to v2.
-- Reject origin == destination, naive datetimes, past departures, and departures beyond Open-Meteo's 16-day forecast range.
+- `origin`/`destination`: objects containing `name` (string for display and history), `lat` (float, -90..90), and `lng` (float, -180..180). Passed directly to Mapbox Directions (`/driving-traffic/{origin.lng},{origin.lat};{dest.lng},{dest.lat}`). No server-side geocoding required in the routing flow.
+- Reject origin == destination (within 0.001°), naive datetimes, past departures, and departures beyond Open-Meteo's 16-day forecast range.
 
 ### Response
 
@@ -206,8 +221,16 @@ No authentication. History is scoped by an anonymous `X-Client-Id` header (UUID 
   "created_at": "2026-11-04T13:42:11Z",
   "reused": false,
   "request_meta": {
-    "origin": "Chicago, IL",
-    "destination": "Denver, CO",
+    "origin": {
+      "name": "Chicago, IL",
+      "lat": 41.8781,
+      "lng": -87.6298
+    },
+    "destination": {
+      "name": "Denver, CO",
+      "lat": 39.7392,
+      "lng": -104.9903
+    },
     "departure_time": "2026-11-04T14:00:00Z",
     "load_weight_lbs": 35000,
     "sample_interval_miles": 25,
@@ -217,7 +240,7 @@ No authentication. History is scoped by an anonymous `X-Client-Id` header (UUID 
   "routes": [
     {
       "id": "route_1",
-      "name": "via I-80 W",
+      "name": "I-80 W, I-76 E",
       "is_recommended": true,
       "total_distance_miles": 1004.2,
       "total_duration_hours": 15.6,
@@ -275,8 +298,14 @@ Contract notes:
 - `metrics.avg_risk_score` is the distance-weighted average risk in `0..4`.
 - `arrival_hour_offset` is a non-negative integer. It may exceed 48 for long trips; the heatmap remains `0..48`.
 - `corridor_heatmap.hourly_intensity` has keys `"0"` through `"48"`; each array aligns by index with `points`. `checkpoints[].heatmap_point_index` points into that array.
-- `overview_polyline` is Google's encoded polyline. Frontend decodes with `@mapbox/polyline`; backend decodes with Python `polyline`.
-- `warnings` entries use `{ "code": "...", "message": "..." }`, e.g. `fewer_than_three_routes`, `no_safe_route`, `route_restrictions_ignored`, `forecast_extended_for_checkpoints`.
+- `overview_polyline` is Mapbox's encoded polyline from `routes[].geometry`, requested with
+  `geometries=polyline` (precision 5, same encoding Google used). Frontend decodes with
+  `@mapbox/polyline`; backend decodes with Python `polyline`.
+- `routes[].name` is derived from the route's leg summary (`legs[0].summary`, e.g.
+  `"I-80 W, I-76 E"`); Mapbox returns no route description. Fall back to `"Route {n}"`.
+- `warnings` entries use `{ "code": "...", "message": "..." }`, e.g. `fewer_than_three_routes`,
+  `no_safe_route`, `truck_restrictions_unsupported`, `departure_time_approximated`,
+  `forecast_extended_for_checkpoints`.
 
 ### History list response
 
@@ -292,7 +321,7 @@ Contract notes:
       "load_weight_lbs": 35000,
       "sample_interval_miles": 25,
       "recommended_route_id": "route_1",
-      "recommended_route_name": "via I-80 W",
+      "recommended_route_name": "I-80 W, I-76 E",
       "total_distance_miles": 1004.2,
       "total_duration_hours": 15.6
     }
@@ -312,7 +341,7 @@ Newest first, limit 50. `GET /api/v1/analyses/{id}/` returns the full stored res
 |---|---:|
 | Validation error | 400 |
 | Analysis not found | 404 |
-| No route / trip beyond forecast range | 422 |
+| Geocode failed / no route / trip beyond forecast range | 422 |
 | Upstream rate limit | 429 |
 | Upstream error / malformed response | 502 |
 | Upstream timeout | 504 |
@@ -328,9 +357,12 @@ Never expose API keys, raw upstream bodies, or stack traces.
 
 - Miles, mph, inches/hour, pounds, WGS84 coordinates.
 - `FORECAST_HOURS = 48`; heatmap offsets `0..48` inclusive (49 samples).
-- `MAX_ROUTES = 3`; intervals `(10, 25, 50)`.
+- `MAX_ROUTES = 3`; intervals `(10, 25, 50)`. Mapbox can return at most 1 primary + 2 alternatives,
+  so 3 is the ceiling, not a guarantee.
 - Use `geopy.distance.geodesic` for all geodesic distances.
-- Use Python `polyline` to decode `overview_polyline`.
+- Use Python `polyline` to decode `overview_polyline` (precision 5).
+- Truck limits sent to Mapbox: `max_height` and `max_width` in **meters**, `max_weight` in **metric
+  tons**. Convert from mm and lb; never send the raw imperial values.
 
 ### 6.2 Checkpoint risk
 
@@ -370,14 +402,18 @@ heatmap_intensity = risk_score / 4.0
 ### 6.3 Distance and speed
 
 ```text
-distance_miles = distanceMeters / 1609.344
-duration_hours = duration_seconds / 3600
+distance_miles = route.distance / 1609.344
+duration_hours = route.duration / 3600
 avg_speed_mph = distance_miles / duration_hours
 ```
 
-Guard non-finite/zero values. If `duration` is missing, use `staticDuration` and warn; if both are missing, fail.
+Guard non-finite/zero values. Require `route.duration`; if it is absent, fall back to
+`duration_typical` and warn, and fail with 502 if both are missing.
 
-Decode the polyline. Compute cumulative geodesic distance between consecutive vertices with `geopy`. If the cumulative length differs from Google's `distance_meters`, scale it so the final cumulative distance equals `distance_miles`. Compute distances once per route and reuse them for checkpoint interpolation; do not recompute geodesic distance for every checkpoint.
+Decode the polyline. Compute cumulative geodesic distance between consecutive vertices with `geopy`.
+If the cumulative length differs from Mapbox's `route.distance`, scale it so the final cumulative
+distance equals `distance_miles`. Compute distances once per route and reuse them for checkpoint
+interpolation; do not recompute geodesic distance for every checkpoint.
 
 ### 6.4 Checkpoints
 
@@ -425,7 +461,7 @@ Sort all routes ascending by:
 (no_travel_miles, severe_miles, high_miles, avg_risk_score, total_duration_hours, source_index)
 ```
 
-The recommended route is the first route with `no_travel_miles == 0`. This intentionally puts No Travel ahead of Severe, per the product decision. `source_index` preserves Google's original order for exact ties.
+The recommended route is the first route with `no_travel_miles == 0`. This intentionally puts No Travel ahead of Severe, per the product decision. `source_index` preserves Mapbox's original order (routes arrive sorted by ascending `weight`) for exact ties.
 
 ### 6.8 Truck position
 
@@ -455,62 +491,66 @@ Checkpoint weather must cover the full trip. If the longest route exceeds 48 hou
 
 ## 7. Integrations
 
-### 7.1 Google Routes — truck + traffic
-
-Use Large Vehicle Routing:
-
-```json
-{
-  "origin": { "address": "Chicago, IL" },
-  "destination": { "address": "Denver, CO" },
-  "travelMode": "TRUCK",
-  "routingPreference": "TRAFFIC_AWARE_OPTIMAL",
-  "departureTime": "2026-11-04T14:00:00Z",
-  "computeAlternativeRoutes": true,
-  "polylineQuality": "HIGH_QUALITY",
-  "polylineEncoding": "ENCODED_POLYLINE",
-  "units": "IMPERIAL",
-  "languageCode": "en-US",
-  "routeModifiers": {
-    "vehicleInfo": {
-      "totalHeightMm": "4114",
-      "totalWidthMm": "2590",
-      "totalLengthMm": "21945",
-      "totalWeightKg": "31751",
-      "totalAxleCount": 5
-    }
-  }
-}
-```
-
-Field mask must include:
+### 7.1 Mapbox Directions — truck limits + traffic
 
 ```text
-routes.distanceMeters,
-routes.duration,
-routes.staticDuration,
-routes.polyline.encodedPolyline,
-routes.description,
-routes.routeLabels,
-routes.warnings,
-routes.travelAdvisory.routeRestrictionsPartiallyIgnored
+GET https://api.mapbox.com/directions/v5/mapbox/driving-traffic/{lng},{lat};{lng},{lat}
+  ?alternatives=true
+  &geometries=polyline
+  &overview=full
+  &steps=false
+  &notifications=all
+  &depart_at=2026-11-04T14:00:00Z
+  &max_height=4.114
+  &max_width=2.59
+  &max_weight=29.48
+  &access_token=MAPBOX_ACCESS_TOKEN
 ```
 
 Critical facts:
 
-- `TRUCK` + `TRAFFIC_AWARE_OPTIMAL` requires **Large Vehicle Routing**, which Google says is limited-access and must be provisioned for the Cloud project. Confirm access before implementation.
-- The generic Routes reference restricts `routingPreference` to `DRIVE`/`TWO_WHEELER`, but the Large Vehicle Routing guide explicitly instructs `TRUCK` + `TRAFFIC_AWARE_OPTIMAL`. Follow the LVR guide and verify against the provisioned project. If the API rejects the combination, stop and report the conflict; do not guess.
-- `GOOGLE_TRUCK_ROUTING_ENABLED=false` must fail fast with a clear configuration error; it must not silently switch to `DRIVE`.
-- LVR is generally available in the contiguous 48 US and experimental in Japan. Outside that, the request fails.
-- `vehicleInfo` is required. `totalHeightMm`, `totalLengthMm`, `totalWidthMm`, and `totalWeightKg` are required for trucking to trigger.
-- The app only collects **load weight**, not truck dimensions or tare weight. Use a configurable default 5-axle semi profile and `gross_weight_lbs = load_weight_lbs + TRUCK_TARE_WEIGHT_LBS`. This is a v1 assumption that must be confirmed.
-- `computeAlternativeRoutes: true` returns up to 3 routes total, not necessarily 3. If fewer, return what exists and warn.
-- The example `totalWeightKg` of `31751` assumes a 40,000 lb load plus a 30,000 lb tare = 70,000 lb gross. Compute it from the actual request; do not hard-code that number.
-- If `routeRestrictionsPartiallyIgnored` is true, warn `route_restrictions_ignored`; still display the route.
-- Do **not** silently fall back to `DRIVE` if LVR is unavailable. A dev-only fallback must be explicit via `GOOGLE_DRIVE_FALLBACK=true` and must be visible in logs/UI.
-- Do not send `avoidTolls` with `TRUCK`; truck toll support is not available.
+- **There is no truck profile.** Mapbox supports `driving-traffic`, `driving`, `walking`, `cycling`.
+  Truck behaviour is approximated by `driving-traffic` plus the vehicle limit parameters
+  `max_height` (m, 0–10), `max_width` (m, 0–10), and `max_weight` (metric tons, 0–100). Always add a
+  `truck_restrictions_unsupported` warning so the UI and reviewer know it is not true truck routing.
+- `max_height`, `max_width`, and `max_weight` **default to a 1.6 m × 1.9 m × 2.5 t vehicle** when
+  omitted. Always send all three explicitly, computed from the truck profile plus the request load.
+  Never rely on the defaults.
+- Road height/width/weight restriction coverage varies by region. There is no
+  `routeRestrictionsPartiallyIgnored` signal; Mapbox silently routes with the data it has.
+- `MAPBOX_TRUCK_RESTRICTIONS_ENABLED=false` is a diagnostic escape hatch only. It must be explicit
+  config, logged, and must still emit the warning; never switch profiles silently.
+- Mapbox has no length or axle-count inputs. `TRUCK_LENGTH_MM` and `TRUCK_AXLE_COUNT` are recorded
+  for documentation only and are **not** sent.
+- `alternatives=true` returns the primary route plus **up to two** alternatives. Fewer than 3 is
+  normal; return what exists and warn `fewer_than_three_routes`.
+- `geometries=polyline` keeps the classic precision-5 encoding, so both `polyline.decode` and
+  `@mapbox/polyline` work unchanged. `overview=full` is required for a usable corridor; `steps=false`
+  keeps the payload small.
+- `max_weight` for the example request above (35,000 lb load + 30,000 lb tare = 65,000 lb) is
+  `65000 * 0.45359237 / 1000 ≈ 29.48` metric tons. Compute it per request; never hard-code it.
+- `notifications=all` is the closest replacement for Google's `routes.warnings`: it reports closure
+  and restriction notifications per leg. Map only notifications you can explain in the UI; ignore the
+  rest.
+- `depart_at` is a genuine (time-dependent) input for `driving-traffic`: live traffic is mixed in
+  only for departures close to now, otherwise historical data is used. Pass the request departure
+  time through; do not substitute `now`. When `depart_at` is outside the live-traffic window, add a
+  `departure_time_approximated` warning so the UI says "historical traffic" rather than implying
+  real-time conditions.
+- The origin/destination coordinates are snapped to the road network (`waypoints[].location`). Use
+  the snapped coordinates — not the geocoded ones — for checkpoint 0 and the final checkpoint.
 
-Errors: no retry on 400/403; bounded retry on 429/5xx/timeouts; return 429/502/504 with safe messages.
+Errors (Mapbox semantics, not HTTP-status semantics):
+
+- `code: "NoRoute"` and `code: "NoSegment"` return **HTTP 200**. Check `code == "Ok"` and a non-empty
+  `routes` array, otherwise return 422.
+- `401` invalid/missing token and `403` account or token-restriction problems are configuration
+  errors: fail fast, never retry, never expose the token or response body.
+- `422 InvalidInput` is a bug on our side (bad parameter); return 502 with a safe message.
+- `429` and `5xx`/timeouts: bounded retry with backoff, then 429/502/504.
+
+Limits: 25 waypoints, 10,000 km total, ~300 requests/minute. `GET` URLs are capped around 8 KB, which
+2 coordinates never approaches.
 
 ### 7.2 Open-Meteo
 
@@ -536,19 +576,30 @@ GET https://api.open-meteo.com/v1/forecast
 - Null/non-finite required values → fail closed with 502 `weather_unavailable`.
 - Fewer samples than expected → 502 `weather_incomplete`.
 
-### 7.3 Geocoding
+### 7.3 Location Search — 2-Step Search & Retrieve (Frontend Direct)
 
-- v1: address waypoints directly to Google Routes. No separate geocoder.
-- Photon/autocomplete is **v2**, not now.
-- Never expose the Google key to the browser.
+To keep the system simple and avoid server-side geocoding during route planning:
+
+1. **Step 1 (Search recommendations on Enter):**
+   When the user enters an origin or destination query and presses Enter, frontend calls the Mapbox Search Box API (`/suggest`) using the public token (`VITE_MAPBOX_PUBLIC_TOKEN`) to get candidate recommendations.
+2. **Step 2 (Retrieve coordinates on selection):**
+   When the user selects a recommendation from the list, frontend calls Mapbox Search Box API (`/retrieve`) to retrieve its exact coordinates `[lng, lat]` and full display name. That's 2 requests per location.
+3. **Route planning receives coordinates directly:**
+   The frontend submits `{ name, lat, lng }` for origin and destination to `POST /api/v1/routes/plan/`. The backend does not perform geocoding during route planning; it calls Mapbox Directions directly with `{origin.lng},{origin.lat};{dest.lng},{dest.lat}`.
+
+This completely decouples location search from backend routing, keeping backend code lean, fast, and free of geocoding logic.
 
 ### 7.4 Map tiles
 
-Leaflet + OpenStreetMap tiles with attribution. If tile limits become a problem, switch providers and update attribution.
+Leaflet + OpenStreetMap tiles with attribution for v1. This keeps the Mapbox token server-side. If the
+map later moves to Mapbox Styles, it needs a separate **public** (`pk.`) token in the frontend — that
+is a different token from `MAPBOX_ACCESS_TOKEN` and must be added to `.env.example` when it happens.
 
 ---
 
 ## 8. Persistence and 1-hour reuse
+
+**Status:** `RouteAnalysis` and its initial migration are implemented. Reuse logic and the plan/history endpoints are pending (M4).
 
 Model `RouteAnalysis` in `apps/api/models.py`:
 
@@ -574,7 +625,7 @@ Index `(client_id, request_hash, created_at)` and `(client_id, created_at)`.
 
 Reuse logic:
 
-- Normalize the request: trim and casefold origin/destination for hashing (store the original for display), UTC departure, integer load, interval, plus `PLAN_CACHE_VERSION` and truck profile version.
+- Normalize the request: round origin/destination lat & lng to 5 decimals, trim and casefold names for hashing (store original for display), UTC departure, integer load, interval, plus `PLAN_CACHE_VERSION` and truck profile version.
 - `request_hash = sha256(canonical_json(normalized_request))`.
 - Look up the latest row with the same `client_id` + `request_hash` where `created_at >= now - 1 hour`.
 - If found, return a copy of `response_payload` with `reused: true`.
@@ -599,7 +650,7 @@ SQLite is fine for local development. Hosting may need Postgres if the filesyste
 
 ### Form
 
-Origin, destination, departure (`datetime-local`), load weight (lbs), interval segmented control. Default load 40,000 and interval 25. Disable submit while loading; show field errors, progress, retry.
+Origin and destination search inputs with search-on-Enter (Request 1) and selection to resolve coordinates (Request 2). Departure (`datetime-local`), load weight (lbs), interval segmented control (10, 25, 50). Default load 40,000 and interval 25. Disable submit while loading or until coordinates are selected; show field errors, progress, retry.
 
 ### Map
 
@@ -657,6 +708,8 @@ No state library, no Axios, no CSS framework unless explicitly decided.
 
 ### Backend tests
 
+**Current state:** no tests are checked in yet; testing is deferred. The list below is the required suite for the later testing pass.
+
 - Risk thresholds on both sides of every boundary; load overrides; max combination; `rule_triggered`.
 - Geopy distance, polyline decode, cumulative scaling, interpolation.
 - Checkpoint intervals 10/25/50, exact multiples, destination inclusion, half-up offsets, segment sums.
@@ -664,7 +717,9 @@ No state library, no Axios, no CSS framework unless explicitly decided.
 - Heatmap dedupe, 49 arrays aligned to points, load applied, offsets.
 - Cache reuse within 1 hour, new row after 1 hour, client scoping, failed computation not saved.
 - API validation, 1/2/3 routes, upstream errors, no secrets.
-- Mock Google/Open-Meteo. No live calls in unit tests.
+- Geocoding success/failure, `NoRoute` with HTTP 200, polyline precision, truck limit conversion,
+  token never logged.
+- Mock Mapbox/Open-Meteo. No live calls in unit tests.
 
 ### Frontend tests
 
@@ -696,7 +751,7 @@ pnpm format:check
 pnpm typecheck
 ```
 
-Add `polyline`, `geopy`, `httpx`, `django-cors-headers`, and a test runner to backend dependencies as needed. Add `gunicorn` when deploying. Configure `django-cors-headers` to allow the `x-client-id` header.
+`django-cors-headers` is installed. Add `polyline`, `geopy`, `httpx`, and a test runner to backend dependencies as needed. Add `gunicorn` when deploying. CORS already allows the `x-client-id` header.
 
 ### Environment
 
@@ -706,9 +761,12 @@ DJANGO_DEBUG=true
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 
-GOOGLE_MAPS_API_KEY=
-GOOGLE_TRUCK_ROUTING_ENABLED=true
-GOOGLE_DRIVE_FALLBACK=false
+# Mapbox Directions (M2)
+MAPBOX_ACCESS_TOKEN=
+MAPBOX_DIRECTIONS_BASE_URL=https://api.mapbox.com/directions/v5
+MAPBOX_PROFILE=driving-traffic
+MAPBOX_TRUCK_RESTRICTIONS_ENABLED=true
+MAPBOX_LANGUAGE=en
 
 TRUCK_HEIGHT_MM=4114
 TRUCK_WIDTH_MM=2590
@@ -724,9 +782,14 @@ PLAN_CACHE_TTL_SECONDS=3600
 PLAN_CACHE_VERSION=v1
 ```
 
-Frontend: `VITE_API_BASE_URL=http://localhost:8000`.
+Frontend (`frontend/.env`):
 
-Never commit `.env` or keys. The Google key must never use a `VITE_` prefix.
+```dotenv
+VITE_API_BASE_URL=http://localhost:8000
+VITE_MAPBOX_PUBLIC_TOKEN=pk.eyJ...
+```
+
+Never commit `.env` or keys. Backend `MAPBOX_ACCESS_TOKEN` is a server-side secret (used for Directions API). Frontend `VITE_MAPBOX_PUBLIC_TOKEN` is a standard public (`pk.`) token (used for Search Box suggest/retrieve).
 
 ---
 
@@ -743,11 +806,11 @@ Never commit `.env` or keys. The Google key must never use a `VITE_` prefix.
 
 ## 12. Milestones
 
-- **M0 — Wire scaffold:** add `apps/__init__.py`, fix `ApiConfig.name`, add DRF/CORS/API app, health endpoint, settings, `.env.example`, backend README. ✅ Done.
-- **M1 — Domain + tests:** types, geopy geo, risk, checkpoints, aggregation, heatmap, ranking.
-- **M2 — Google Routes:** TRUCK/traffic client, vehicleInfo, field mask, 1–3 routes, LVR/error handling.
+- **M0 — Wire scaffold:** add `apps/__init__.py`, fix `ApiConfig.name`, add DRF/CORS/API app, health endpoint, settings, `.env.example`, backend README. ✅ Done (health/CORS smoke-checked; automated tests deferred).
+- **M1 — Domain + tests:** types, geopy geo, risk, checkpoints, aggregation, heatmap, ranking. Tests deferred.
+- **M2 — Mapbox Directions:** `driving-traffic` Directions client using direct coordinates, `max_height`/`max_width`/`max_weight`, 1–3 routes, `code`-based error handling. (No server geocoding in plan pipeline).
 - **M3 — Open-Meteo:** batching, units, UTC alignment, 0–48 + long-trip extension, heatmap matrix.
-- **M4 — Persistence + API:** `RouteAnalysis`, migrations, 1h reuse, history endpoints, serializers, errors.
+- **M4 — Persistence + API:** `RouteAnalysis`, migrations, 1h reuse, history endpoints, serializers, errors. Model + migration already landed; API work remains.
 - **M5 — Frontend foundation:** Leaflet, polyline decode, API client/types, form, route lines.
 - **M6 — Checkpoints/summaries:** markers, cards, metrics, recommendation/no-safe-route UI, legend.
 - **M7 — Heatmap/slider/truck:** external frame store, `leaflet.heat`, marker updates, truck animation, 60 FPS profiling.
@@ -760,7 +823,7 @@ Acceptance: `POST /plan` returns the §5 shape; same request within 1h returns `
 
 ## 13. Non-goals
 
-- Photon/autocomplete (v2)
+- Keystroke-by-keystroke real-time typeahead (v1 uses simple search on Enter -> pick recommendation to retrieve coords)
 - User accounts, payments, saved favorites
 - Live traffic updates after the initial plan
 - Turn-by-turn navigation
@@ -777,8 +840,8 @@ Acceptance: `POST /plan` returns the §5 shape; same request within 1h returns `
 ### Locked
 
 1. **No Travel is highest risk.** A route with any No Travel miles is displayed but never recommended. If all routes have No Travel, `recommended_route_id` is null.
-2. **Truck + traffic.** Use Google `TRUCK` + `TRAFFIC_AWARE_OPTIMAL` via Large Vehicle Routing.
-3. **Geocoding.** Use Google Routes address waypoints in v1. Photon in v2.
+2. **Mapbox, traffic, and truck limits.** Use `mapbox/driving-traffic` with `max_height`, `max_width`, and `max_weight` computed from the truck profile and load. Mapbox has no truck profile, so this is an explicit, surfaced approximation (`truck_restrictions_unsupported` warning), not silent car routing.
+3. **Location search & direct coordinates.** Handled client-side using Mapbox Search Box API with a public token (`VITE_MAPBOX_PUBLIC_TOKEN`). User searches on Enter to get suggestions and selects to retrieve coordinates (2 requests per point). The plan endpoint takes coordinates directly and sends them straight to Mapbox Directions without server-side geocoding.
 4. **Forecast.** 49 inclusive hourly samples (`0..48`) for the heatmap/slider. Extend checkpoint weather beyond 48h for long trips, up to Open-Meteo's 16-day limit.
 5. **Hosting.** Deferred; decide later.
 6. **Polyline/geodesic.** Python `polyline` and `geopy.distance.geodesic` on the backend; `@mapbox/polyline` on the frontend.
@@ -787,9 +850,9 @@ Acceptance: `POST /plan` returns the §5 shape; same request within 1h returns `
 
 ### Open / confirm before M2
 
-1. **Google LVR access.** Is the Google Cloud project provisioned for Large Vehicle Routing? Without it, `TRUCK` + `TRAFFIC_AWARE_OPTIMAL` will fail. If not provisioned, do we temporarily use `DRIVE` for the demo, or block on access?
-2. **Truck profile.** The app only collects load weight. Confirm the default dimensions, axle count, and tare weight for `vehicleInfo`; the current placeholder is a 5-axle semi (4114 × 2590 × 21945 mm, 5 axles, 30,000 lb tare). `totalWeightKg` will be `(load + tare) * 0.45359237`.
-3. **“Similar request” definition.** Current plan: identical normalized origin, destination, departure time, load, interval, cache version, and truck profile within 1 hour. If departure time may differ, cache reuse would return stale ETAs/weather. Confirm this is intended.
-4. **History privacy.** Current plan: per-browser anonymous `X-Client-Id`; cache reuse is also scoped to that client. Confirm or switch to global history.
-5. **Production database.** SQLite is fine locally; if the host has ephemeral storage, use Postgres. Decide with hosting. The backend also pins Python **3.15**; confirm the host supports it or lower `requires-python`/`.python-version` to a tested version.
-6. **LVR alternatives.** Confirm the provisioned LVR project returns up to 3 alternatives with `computeAlternativeRoutes`. If it returns one, the 3-route requirement needs a different routing strategy.
+1. **Truck profile.** The app only collects load weight. Confirm the default dimensions and tare weight: 4114 mm high × 2590 mm wide, 30,000 lb tare. Only height, width, and gross weight reach Mapbox (as 4.114 m, 2.59 m, and `(load + tare) * 0.45359237 / 1000` metric tons); length and axle count cannot be sent. Confirm that approximation is acceptable for the demo.
+2. **“Similar request” definition.** Current plan: identical normalized origin, destination, departure time, load, interval, cache version, and truck profile within 1 hour. If departure time may differ, cache reuse would return stale ETAs/weather. Confirm this is intended.
+3. **History privacy.** Current plan: per-browser anonymous `X-Client-Id`; cache reuse is also scoped to that client. Confirm or switch to global history.
+4. **Production database.** SQLite is fine locally; if the host has ephemeral storage, use Postgres. Decide with hosting. The backend also pins Python **3.15**; confirm the host supports it or lower `requires-python`/`.python-version` to a tested version.
+5. **Alternative route count.** Mapbox returns a primary route plus at most two alternatives, and often only one. Confirm that "up to 3, sometimes fewer, with a `fewer_than_three_routes` warning" is acceptable for the 3-route requirement rather than forcing a third route by other means.
+6. **Truck restriction coverage.** Mapbox documents that height/width/weight restriction data coverage varies by region and gives no partial-ignore signal. Accept the silence, or additionally warn whenever the gross weight exceeds a configured threshold?
