@@ -1,0 +1,30 @@
+{
+  // Oxc is the single source of truth for linting and formatting in this project.
+  "oxc.enable": true,
+  "oxc.lint.run": "onType",
+  "oxc.fixKind": "safe_fix",
+
+  // Format and fix on save with Oxc.
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "explicit"
+  },
+
+  // Keep formatting consistent with the repo's line endings and whitespace rules.
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true,
+
+  // Use the TypeScript version installed in the workspace.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  // Keep the explorer focused on source files.
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "oxlint",
+      "type": "shell",
+      "command": "pnpm run lint",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "oxlint: fix",
+      "type": "shell",
+      "command": "pnpm run lint:fix",
+      "problemMatcher": []
+    },
+    {
+      "label": "oxfmt: check",
+      "type": "shell",
+      "command": "pnpm run format:check",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "oxfmt: write",
+      "type": "shell",
+      "command": "pnpm run format",
+      "problemMatcher": []
+    },
+    {
+      "label": "typecheck",
+      "type": "shell",
+      "command": "pnpm run typecheck",
+      "group": "build",
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "pnpm run build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$tsc"
+    }
+  ]
+}

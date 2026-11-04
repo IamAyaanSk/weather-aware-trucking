@@ -1,0 +1,80 @@
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+
+# Python testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Type checking & linting
+.mypy_cache/
+.pyre/
+.ruff_cache/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Node.js / React
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Vite
+.vite/
+
+# Testing
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# IDEs & editors
+.idea/
+/.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs & temporary files
+logs/
+tmp/
+temp/
+
+# Docker
+.docker/

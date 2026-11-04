@@ -1,0 +1,26 @@
+
+{
+    // Python environment
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+
+    // Pylance
+    "python.languageServer": "Pylance",
+    "python.analysis.typeCheckingMode": "standard",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.diagnosticMode": "workspace",
+
+    // Ruff    
+    "ruff.lint.enable": true,   
+    
+    "python.analysis.enableDjangoSupport": true,
+
+    // Formatting
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+        }
+    }
+}
