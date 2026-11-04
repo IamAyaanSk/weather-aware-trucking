@@ -36,12 +36,12 @@ The user enters origin, destination, departure time, load weight (lbs), and a sa
 
 ### Evaluation
 
-| Area | Weight |
-|---|---:|
-| Routes, weather, risk, recommendation | 40% |
-| UI, map, heatmap smoothness/performance | 40% |
-| Code quality | 15% |
-| Documentation and walkthrough | 5% |
+| Area                                    | Weight |
+| --------------------------------------- | -----: |
+| Routes, weather, risk, recommendation   |    40% |
+| UI, map, heatmap smoothness/performance |    40% |
+| Code quality                            |    15% |
+| Documentation and walkthrough           |     5% |
 
 Correctness and clarity over extra features.
 
@@ -178,12 +178,12 @@ frontend/src/
 
 ### Endpoints
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/v1/routes/plan/` | Create or reuse an analysis |
-| `GET` | `/api/v1/analyses/` | List this client's saved analyses |
-| `GET` | `/api/v1/analyses/{id}/` | Full stored analysis |
-| `GET` | `/api/v1/health/` | Hosting health check |
+| Method | Path                     | Purpose                           |
+| ------ | ------------------------ | --------------------------------- |
+| `POST` | `/api/v1/routes/plan/`   | Create or reuse an analysis       |
+| `GET`  | `/api/v1/analyses/`      | List this client's saved analyses |
+| `GET`  | `/api/v1/analyses/{id}/` | Full stored analysis              |
+| `GET`  | `/api/v1/health/`        | Hosting health check              |
 
 No authentication. History is scoped by an anonymous `X-Client-Id` header (UUID generated in `localStorage`). If the header is absent, use `"anonymous"`. Add DRF anonymous throttling. `X-Client-Id` only scopes history; it is **not** authentication or a security boundary. Set `authentication_classes = []` and `permission_classes = [AllowAny]` on these public views so DRF session auth does not impose CSRF on the cross-origin POST; keep CSRF for `/admin/`.
 
@@ -334,18 +334,23 @@ Newest first, limit 50. `GET /api/v1/analyses/{id}/` returns the full stored res
 ### Errors
 
 ```json
-{ "error": { "code": "weather_unavailable", "message": "Weather data could not be retrieved." } }
+{
+  "error": {
+    "code": "weather_unavailable",
+    "message": "Weather data could not be retrieved."
+  }
+}
 ```
 
-| Condition | Status |
-|---|---:|
-| Validation error | 400 |
-| Analysis not found | 404 |
-| Geocode failed / no route / trip beyond forecast range | 422 |
-| Upstream rate limit | 429 |
-| Upstream error / malformed response | 502 |
-| Upstream timeout | 504 |
-| Unexpected error | 500 |
+| Condition                                              | Status |
+| ------------------------------------------------------ | -----: |
+| Validation error                                       |    400 |
+| Analysis not found                                     |    404 |
+| Geocode failed / no route / trip beyond forecast range |    422 |
+| Upstream rate limit                                    |    429 |
+| Upstream error / malformed response                    |    502 |
+| Upstream timeout                                       |    504 |
+| Unexpected error                                       |    500 |
 
 Never expose API keys, raw upstream bodies, or stack traces.
 
@@ -366,11 +371,11 @@ Never expose API keys, raw upstream bodies, or stack traces.
 
 ### 6.2 Checkpoint risk
 
-| Condition | Low | Moderate | High | Severe | No Travel |
-|---|---:|---:|---:|---:|---:|
-| Wind (mph) | `<25` | `25–34` | `35–44` | `45–54` | `>=55` |
-| Rain (in/hr) | `<0.10` | `0.10–0.25` | `0.25–0.50` | `0.50–1.00` | `>1.00` |
-| Snow (in/hr) | `<0.5` | `0.5–1.0` | `1.0–2.0` | `2.0–3.0` | `>3.0` |
+| Condition    |     Low |    Moderate |        High |      Severe | No Travel |
+| ------------ | ------: | ----------: | ----------: | ----------: | --------: |
+| Wind (mph)   |   `<25` |     `25–34` |     `35–44` |     `45–54` |    `>=55` |
+| Rain (in/hr) | `<0.10` | `0.10–0.25` | `0.25–0.50` | `0.50–1.00` |   `>1.00` |
+| Snow (in/hr) |  `<0.5` |   `0.5–1.0` |   `1.0–2.0` |   `2.0–3.0` |    `>3.0` |
 
 Implement ranges with no gaps for fractional values:
 

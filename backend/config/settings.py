@@ -158,4 +158,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
     'DEFAULT_THROTTLE_CLASSES': ['rest_framework.throttling.AnonRateThrottle'],
     'DEFAULT_THROTTLE_RATES': {'anon': '120/min'},
+    'EXCEPTION_HANDLER': 'apps.api.exceptions.custom_exception_handler',
 }
+
+
+HTTP_TIMEOUT_SECONDS = float(os.getenv('HTTP_TIMEOUT_SECONDS', '15'))
+PLAN_CACHE_TTL_SECONDS = int(os.getenv('PLAN_CACHE_TTL_SECONDS', '3600'))
+PLAN_CACHE_VERSION = os.getenv('PLAN_CACHE_VERSION', 'v1')
+TRUCK_PROFILE_VERSION = os.getenv('TRUCK_PROFILE_VERSION', 'v1')
