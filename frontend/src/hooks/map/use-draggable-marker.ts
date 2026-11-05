@@ -9,6 +9,7 @@ interface UseDraggableMarkerOptions {
   onChange?: (location: LocationCoordinate) => void;
   createMarkerElement: () => HTMLElement;
   onDragStateChange?: (isDragging: boolean) => void;
+  draggable?: boolean;
 }
 
 export function useDraggableMarker({
@@ -17,6 +18,7 @@ export function useDraggableMarker({
   onChange,
   createMarkerElement,
   onDragStateChange,
+  draggable = true,
 }: UseDraggableMarkerOptions) {
   const markerRef = useRef<Marker | null>(null);
   const isDraggingRef = useRef(false);
@@ -50,7 +52,7 @@ export function useDraggableMarker({
       const el = createMarkerElement();
       const marker = new Marker({
         element: el,
-        draggable: true,
+        draggable,
         anchor: "bottom",
       })
         .setLngLat([location.lng, location.lat])
@@ -89,6 +91,7 @@ export function useDraggableMarker({
 
       markerRef.current = marker;
     } else {
+      markerRef.current.setDraggable(draggable);
       const cur = markerRef.current.getLngLat();
       if (
         Math.abs(cur.lng - location.lng) > 0.00001 ||
@@ -101,7 +104,7 @@ export function useDraggableMarker({
     return () => {
       // Do not remove on simple position update; cleanup on map change or unmount
     };
-  }, [map, location, createMarkerElement]);
+  }, [map, location, createMarkerElement, draggable]);
 
   useEffect(() => {
     return () => {

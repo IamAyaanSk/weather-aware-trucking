@@ -35,7 +35,9 @@ class PlanRouteQuerySerializer(serializers.Serializer):
 
     origin_lat = serializers.FloatField(min_value=-90.0, max_value=90.0)
     origin_lng = serializers.FloatField(min_value=-180.0, max_value=180.0)
-    origin_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    origin_name = serializers.CharField(
+        max_length=255, required=False, allow_blank=True
+    )
 
     dest_lat = serializers.FloatField(min_value=-90.0, max_value=90.0)
     dest_lng = serializers.FloatField(min_value=-180.0, max_value=180.0)
@@ -51,6 +53,7 @@ class PlanRouteQuerySerializer(serializers.Serializer):
 
     def validate_departure_time(self, value: datetime) -> datetime:
         now_utc = datetime.now(UTC)
+
         if value < now_utc - timedelta(seconds=60):
             raise serializers.ValidationError('Departure time cannot be in the past.')
 

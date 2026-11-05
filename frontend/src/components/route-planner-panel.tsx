@@ -2,9 +2,17 @@ import { useState } from "react";
 import { Button } from "#components/ui/button";
 import { Input } from "#components/ui/input";
 import { Separator } from "#components/ui/separator";
+import { Badge } from "#components/ui/badge";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "#components/ui/accordion";
 import { LocationAutocompleteInput } from "./location-autocomplete-input";
-import type { LocationCoordinate } from "../api/types";
-import { ArrowUpDown } from "lucide-react";
+import type { LocationCoordinate, RouteItem } from "../api/types";
+import { formatDistance, formatDuration, formatSpeed } from "../lib/format";
+import { ArrowUpDown, HazeIcon, Loader2, Map, Pencil } from "lucide-react";
 import { cn } from "cn";
 
 interface RoutePlannerPanelProps {
@@ -22,6 +30,10 @@ interface RoutePlannerPanelProps {
     departureTime: string;
   }) => void;
   isPending?: boolean;
+  routes?: RouteItem[];
+  selectedRouteId?: string | null;
+  onSelectRoute?: (routeId: string) => void;
+  error?: Error | null;
 }
 
 function formatLocalDateTime(date: Date): string {
@@ -44,25 +56,37 @@ export function RoutePlannerPanel({
   onTogglePickOnMap,
   onPlanRoute,
   isPending = false,
+  routes,
+  selectedRouteId,
+  onSelectRoute,
+  error = null,
 }: RoutePlannerPanelProps): React.JSX.Element {
   const [loadWeightLbs, setLoadWeightLbs] = useState<number>(35000);
-  const [departureTime, setDepartureTime] = useState<string>(() => formatLocalDateTime(new Date()));
+  const [departureTime, setDepartureTime] = useState<string>(() =>
+    formatLocalDateTime(new Date()),
+  );
+  const [isEditingForm, setIsEditingForm] = useState(false);
+
+  const hasRoutes = Boolean(routes && routes.length > 0);
 
   const handleSwapLocations = () => {
+    if (isPending) return;
     const tempOrigin = origin;
     onOriginChange(destination);
     onDestinationChange(tempOrigin);
   };
 
   const handleSetNow = () => {
+    if (isPending) return;
     setDepartureTime(formatLocalDateTime(new Date()));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!origin || !destination) {
+    if (!origin || !destination || isPending) {
       return;
     }
+    setIsEditingForm(false);
     onPlanRoute?.({
       origin,
       destination,
@@ -70,6 +94,8 @@ export function RoutePlannerPanel({
       departureTime,
     });
   };
+
+  const accordionValue = selectedRouteId ? [selectedRouteId] : [];
 
   return (
     <aside
@@ -79,7 +105,7 @@ export function RoutePlannerPanel({
       )}
     >
       {/* Top Header */}
-      <div className="border-b border-border/70 px-5 py-4">
+      <div className="border-b border-border/70 px-5 py-4 shrink-0">
         <h1 className="text-sm font-semibold tracking-tight text-foreground">
           Weather aware route planning
         </h1>
@@ -88,165 +114,443 @@ export function RoutePlannerPanel({
         </p>
       </div>
 
-      {/* Main Form Section (Scrollable) */}
-      <div className="flex-1 overflow-y-auto px-5 py-4">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Origin & Destination Section */}
-          <div className="relative flex items-center gap-3">
-            {/* Left Indicator Track */}
-            <div className="flex flex-col items-center justify-between self-stretch py-2 w-4 shrink-0">
-              {/* Origin Hollow Ring */}
-              <div className="size-3.5 rounded-full border-2 border-foreground/80 bg-background shrink-0" />
-              {/* 3 Connecting Dots */}
-              <div className="flex flex-col items-center gap-0.5 my-1">
-                <div className="size-1 rounded-full bg-muted-foreground/60" />
-                <div className="size-1 rounded-full bg-muted-foreground/60" />
-                <div className="size-1 rounded-full bg-muted-foreground/60" />
+      {/* Main Content (Scrollable) */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        {/* Once we have routes and not in edit mode: Show the same Origin & Dest UI using readonly inputs */}
+        {hasRoutes && !isEditingForm ? (
+          <div className="space-y-4">
+            {/* Same UI structure as before: Left indicator track, 2 inputs, and right button */}
+            <div className="relative flex items-center gap-3">
+              {/* Left Indicator Track */}
+              <div className="flex flex-col items-center justify-between self-stretch py-2 w-4 shrink-0">
+                <div className="size-3.5 rounded-full border-2 border-foreground/80 bg-background shrink-0" />
+                <div className="flex flex-col items-center gap-0.5 my-1">
+                  <div className="size-1 rounded-full bg-muted-foreground/60" />
+                  <div className="size-1 rounded-full bg-muted-foreground/60" />
+                  <div className="size-1 rounded-full bg-muted-foreground/60" />
+                </div>
+                <svg
+                  viewBox="0 0 24 24"
+                  className="size-4 text-destructive shrink-0"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                  <circle cx="12" cy="9" r="2.2" fill="var(--color-card)" />
+                </svg>
               </div>
-              {/* Destination Red Pin */}
-              <svg
-                viewBox="0 0 24 24"
-                className="size-4 text-destructive shrink-0"
-                fill="currentColor"
-                aria-hidden="true"
+
+              {/* Readonly Inputs Column */}
+              <div className="flex-1 space-y-2.5 min-w-0">
+                <div>
+                  <label htmlFor="readonly-origin-input" className="sr-only">
+                    Origin
+                  </label>
+                  <Input
+                    id="readonly-origin-input"
+                    readOnly
+                    value={origin?.name || ""}
+                    title={origin?.name}
+                    className="h-10 text-sm bg-background/50 border-input rounded-lg truncate cursor-default select-none focus-visible:ring-0"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="readonly-destination-input"
+                    className="sr-only"
+                  >
+                    Destination
+                  </label>
+                  <Input
+                    id="readonly-destination-input"
+                    readOnly
+                    value={destination?.name || ""}
+                    title={destination?.name}
+                    className="h-10 text-sm bg-background/50 border-input rounded-lg truncate cursor-default select-none focus-visible:ring-0"
+                  />
+                </div>
+              </div>
+
+              {/* Edit button close to inputs to toggle editable form */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsEditingForm(true)}
+                title="Edit origin and destination"
+                className="size-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80 shrink-0 cursor-pointer"
               >
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
-                <circle cx="12" cy="9" r="2.2" fill="var(--color-card)" />
-              </svg>
+                <Pencil className="size-4" />
+                <span className="sr-only">Edit route inputs</span>
+              </Button>
             </div>
 
-            {/* Inputs Column with Photon Autocomplete */}
-            <div className="flex-1 space-y-2.5 min-w-0">
-              <div>
-                <label htmlFor="origin-input" className="sr-only">
-                  Origin
-                </label>
-                <LocationAutocompleteInput
-                  id="origin-input"
-                  placeholder="Choose starting point..."
-                  value={origin}
-                  onChange={onOriginChange}
-                  iconType="origin"
-                  isPickingOnMap={pickingTarget === "origin"}
-                  onTogglePickOnMap={
-                    onTogglePickOnMap ? () => onTogglePickOnMap("origin") : undefined
-                  }
-                />
-              </div>
+            <Separator className="bg-border/60" />
 
-              <div>
-                <label htmlFor="destination-input" className="sr-only">
-                  Destination
-                </label>
-                <LocationAutocompleteInput
-                  id="destination-input"
-                  placeholder="Choose destination..."
-                  value={destination}
-                  onChange={onDestinationChange}
-                  iconType="destination"
-                  isPickingOnMap={pickingTarget === "destination"}
-                  onTogglePickOnMap={
-                    onTogglePickOnMap ? () => onTogglePickOnMap("destination") : undefined
+            {/* Routes Accordion List */}
+            <div className="space-y-2 pt-4">
+              <span className="font-semibold text-foreground tracking-tight px-0.5 block">
+                Available Routes ({routes?.length})
+              </span>
+
+              <Accordion
+                value={accordionValue}
+                onValueChange={(val) => {
+                  const newId = Array.isArray(val) ? val[0] : val;
+                  if (newId && typeof newId === "string" && onSelectRoute) {
+                    onSelectRoute(newId);
                   }
-                />
-              </div>
+                }}
+              >
+                {routes?.map((route, index) => {
+                  const isSelected = route.id === selectedRouteId;
+                  const hasNoTravel = route.metrics.no_travel_miles > 0;
+                  const hasSevere = route.metrics.severe_miles > 0;
+
+                  return (
+                    <AccordionItem
+                      key={route.id}
+                      value={route.id}
+                      className="transition-colors not-last:border-b not-last:border-border/80"
+                    >
+                      <AccordionTrigger
+                        onClick={() => onSelectRoute?.(route.id)}
+                        className={cn(
+                          "hover:no-underline transition-colors text-left w-full px-0.5 py-3",
+                          isSelected && "text-foreground font-semibold",
+                        )}
+                      >
+                        <div className="flex flex-col gap-1 min-w-0 flex-1 pr-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-foreground truncate">
+                              {route.name || `Route ${index + 1}`}
+                            </span>
+                          </div>
+
+                          {/* Small Total Miles and Hours */}
+                          <span className="text-xs font-bold text-muted-foreground">
+                            {formatDistance(route.total_distance_miles)} •{" "}
+                            {formatDuration(route.total_duration_hours)}
+                          </span>
+
+                          {route.is_recommended && (
+                            <Badge className="mt-1 text-xs" variant="default">
+                              Recommended
+                            </Badge>
+                          )}
+                        </div>
+                      </AccordionTrigger>
+
+                      <AccordionContent className="pb-3 text-xs">
+                        <div className="flex flex-col gap-5 pt-2">
+                          {/* Metrics Summary Grid */}
+
+                          <div>
+                            <h4 className="text-sm font-bold mb-3 flex items-center gap-1">
+                              <Map size={16} />
+                              <span>Route summary</span>
+                            </h4>
+                            <ul className="flex flex-row justify-between gap-2 flex-wrap">
+                              <li className="flex gap-2.5">
+                                <span className="text-muted-foreground font-medium">
+                                  Total trip distance:
+                                </span>{" "}
+                                <span className="font-bold">
+                                  {formatDistance(route.total_distance_miles)}
+                                </span>
+                              </li>
+                              <li className="flex gap-2.5">
+                                <span className="text-muted-foreground font-medium">
+                                  Total trip duration:
+                                </span>{" "}
+                                <span className="font-bold">
+                                  {formatDuration(route.total_duration_hours)}
+                                </span>
+                              </li>
+                              <li className="flex gap-2.5">
+                                <span className="text-muted-foreground font-medium">
+                                  Recommended avg speed:
+                                </span>{" "}
+                                <span className="font-bold">
+                                  {formatSpeed(route.avg_speed_mph)}
+                                </span>
+                              </li>
+                            </ul>
+                          </div>
+
+                          <div>
+                            <h4 className="text-sm font-bold mb-3 flex items-center gap-1">
+                              <HazeIcon size={16} />
+                              <span>Risk assessment</span>
+                            </h4>
+
+                            <ul className="flex flex-row justify-between gap-3.5 flex-wrap">
+                              <li className="flex gap-1.5 text-green-300/80">
+                                <span>Low:</span>{" "}
+                                <span>
+                                  {formatDistance(route.metrics.low_miles)}
+                                </span>
+                              </li>
+                              <li className="flex gap-1.5 text-yellow-300/80">
+                                <span>Moderate:</span>{" "}
+                                <span>
+                                  {formatDistance(route.metrics.moderate_miles)}
+                                </span>
+                              </li>
+                              <li className="flex gap-1.5 text-orange-300/80">
+                                <span>High:</span>{" "}
+                                <span>
+                                  {formatDistance(route.metrics.high_miles)}
+                                </span>
+                              </li>
+                              <li className="flex gap-1.5 text-red-300/80">
+                                <span>Severe:</span>{" "}
+                                <span>
+                                  {formatDistance(route.metrics.severe_miles)}
+                                </span>
+                              </li>
+                              <li className="flex gap-1.5 text-amber-600/80">
+                                <span>No-Travel:</span>{" "}
+                                <span>
+                                  {formatDistance(
+                                    route.metrics.no_travel_miles,
+                                  )}
+                                </span>
+                              </li>
+                            </ul>
+                          </div>
+
+                          {/* Checkpoints dummy link at down right */}
+                          <div className="flex justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log(
+                                  "Checkpoints for route",
+                                  route.id,
+                                  route.checkpoints,
+                                );
+                              }}
+                              className="text-[11px] text-primary hover:underline font-medium cursor-pointer"
+                            >
+                              View checkpoints ({route.checkpoints.length}) →
+                            </button>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
             </div>
-
-            {/* Swap Button Column */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleSwapLocations}
-              title="Swap origin and destination"
-              className="size-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80 shrink-0"
-            >
-              <ArrowUpDown className="size-4" />
-              <span className="sr-only">Swap origin and destination</span>
-            </Button>
           </div>
+        ) : (
+          /* Editable Form (Shown before routes exist, or when user clicks Edit) */
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Origin & Destination Inputs with left track and swap button */}
+            <div className="relative flex items-center gap-3">
+              {/* Left Indicator Track */}
+              <div className="flex flex-col items-center justify-between self-stretch py-2 w-4 shrink-0">
+                <div className="size-3.5 rounded-full border-2 border-foreground/80 bg-background shrink-0" />
+                <div className="flex flex-col items-center gap-0.5 my-1">
+                  <div className="size-1 rounded-full bg-muted-foreground/60" />
+                  <div className="size-1 rounded-full bg-muted-foreground/60" />
+                  <div className="size-1 rounded-full bg-muted-foreground/60" />
+                </div>
+                <svg
+                  viewBox="0 0 24 24"
+                  className="size-4 text-destructive shrink-0"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                  <circle cx="12" cy="9" r="2.2" fill="var(--color-card)" />
+                </svg>
+              </div>
 
-          <Separator className="bg-border/60" />
+              {/* Inputs Column */}
+              <div className="flex-1 space-y-2.5 min-w-0">
+                <div>
+                  <label htmlFor="origin-input" className="sr-only">
+                    Origin
+                  </label>
+                  <LocationAutocompleteInput
+                    id="origin-input"
+                    placeholder="Choose starting point..."
+                    value={origin}
+                    onChange={onOriginChange}
+                    disabled={isPending}
+                    iconType="origin"
+                    isPickingOnMap={pickingTarget === "origin"}
+                    onTogglePickOnMap={
+                      onTogglePickOnMap
+                        ? () => onTogglePickOnMap("origin")
+                        : undefined
+                    }
+                  />
+                </div>
 
-          {/* Cargo Load Weight Field */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label htmlFor="cargo-weight-input" className="text-xs font-medium text-foreground">
+                <div>
+                  <label htmlFor="destination-input" className="sr-only">
+                    Destination
+                  </label>
+                  <LocationAutocompleteInput
+                    id="destination-input"
+                    placeholder="Choose destination..."
+                    value={destination}
+                    onChange={onDestinationChange}
+                    disabled={isPending}
+                    iconType="destination"
+                    isPickingOnMap={pickingTarget === "destination"}
+                    onTogglePickOnMap={
+                      onTogglePickOnMap
+                        ? () => onTogglePickOnMap("destination")
+                        : undefined
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Swap Button Column */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                disabled={isPending || !origin || !destination}
+                onClick={handleSwapLocations}
+                title="Swap origin and destination"
+                className="size-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ArrowUpDown className="size-4" />
+                <span className="sr-only">Swap origin and destination</span>
+              </Button>
+            </div>
+
+            <Separator className="bg-border/60" />
+
+            {/* Cargo Load Weight Field */}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="cargo-weight-input"
+                className="text-xs font-medium text-foreground block"
+              >
                 Cargo load weight
               </label>
+              <div className="relative">
+                <Input
+                  id="cargo-weight-input"
+                  type="number"
+                  min={0}
+                  max={80000}
+                  step={500}
+                  value={loadWeightLbs}
+                  disabled={isPending}
+                  onChange={(e) =>
+                    setLoadWeightLbs(Math.max(0, Number(e.target.value) || 0))
+                  }
+                  className="h-10 pr-12 text-sm bg-background/70 border-input rounded-lg focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                  lbs
+                </span>
+              </div>
             </div>
-            <div className="relative">
-              <Input
-                id="cargo-weight-input"
-                type="number"
-                min={0}
-                max={80000}
-                step={500}
-                value={loadWeightLbs}
-                onChange={(e) => setLoadWeightLbs(Math.max(0, Number(e.target.value) || 0))}
-                className="h-10 pr-12 text-sm bg-background/70 border-input rounded-lg focus-visible:ring-1 focus-visible:ring-primary"
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
-                lbs
-              </span>
-            </div>
-          </div>
 
-          {/* Departure Time Field - White calendar indicator */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label htmlFor="departure-time-input" className="text-xs font-medium text-foreground">
-                Departure time
-              </label>
-              <button
-                type="button"
-                onClick={handleSetNow}
-                className="text-[11px] text-primary hover:underline font-medium transition-colors cursor-pointer"
-              >
-                Set to Now
-              </button>
+            {/* Departure Time Field */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="departure-time-input"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Departure time
+                </label>
+                <button
+                  type="button"
+                  onClick={handleSetNow}
+                  disabled={isPending}
+                  className="text-[11px] text-primary hover:underline font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Set to Now
+                </button>
+              </div>
+              <Input
+                id="departure-time-input"
+                type="datetime-local"
+                value={departureTime}
+                disabled={isPending}
+                onChange={(e) => setDepartureTime(e.target.value)}
+                className="h-10 text-sm bg-background/70 border-input rounded-lg focus-visible:ring-1 focus-visible:ring-primary [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-85 hover:[&::-webkit-calendar-picker-indicator]:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
             </div>
-            <Input
-              id="departure-time-input"
-              type="datetime-local"
-              value={departureTime}
-              onChange={(e) => setDepartureTime(e.target.value)}
-              className="h-10 text-sm bg-background/70 border-input rounded-lg focus-visible:ring-1 focus-visible:ring-primary [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-85 hover:[&::-webkit-calendar-picker-indicator]:opacity-100"
+
+            {/* Error Feedback */}
+            {error && !isPending && (
+              <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-2.5">
+                {error.message ||
+                  "Could not retrieve route plan. Please check inputs and retry."}
+              </p>
+            )}
+
+            {/* Submit Action */}
+            <div className="pt-1 flex items-center gap-2">
+              <Button
+                type="submit"
+                disabled={!origin || !destination || isPending}
+                className="flex-1 h-10 text-sm font-semibold rounded-lg shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPending ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="size-4 animate-spin" />
+                    Planning route...
+                  </span>
+                ) : hasRoutes ? (
+                  "Update route plan"
+                ) : (
+                  "Get route plan"
+                )}
+              </Button>
+
+              {hasRoutes && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() => setIsEditingForm(false)}
+                  className="h-10 text-sm px-3 cursor-pointer"
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Bottom Section: Route Insights Card (Shown only before routes plan) */}
+      {!hasRoutes && !isPending && (
+        <div className="p-4 mt-auto shrink-0">
+          <div className="relative h-38 overflow-hidden rounded-sm bg-background/60 p-4 shadow-xs">
+            <div className="relative z-10 space-y-1 pr-24">
+              <h3 className="text-sm font-medium text-foreground">
+                Route insights
+              </h3>
+              <p className="text-xs text-muted-foreground/70">
+                Plan your route simply by getting each analysis on the optimal
+                route and predict how your journey would be.
+              </p>
+            </div>
+
+            <img
+              src="/assets/truck.svg"
+              alt="Truck"
+              className="absolute right-0 -bottom-1 w-40 h-auto pointer-events-none opacity-85 object-contain"
             />
           </div>
-
-          {/* Submit Action */}
-          <div className="pt-1">
-            <Button
-              type="submit"
-              disabled={!origin || !destination || isPending}
-              className="w-full h-10 text-sm font-semibold rounded-lg shadow-sm cursor-pointer disabled:opacity-50"
-            >
-              {isPending ? "Getting route plan..." : "Get route plan"}
-            </Button>
-          </div>
-        </form>
-      </div>
-
-      {/* Bottom Section: Route Insights Card */}
-      <div className="p-4 mt-auto shrink-0">
-        <div className="relative h-38 overflow-hidden rounded-sm bg-background/60 p-4 shadow-xs">
-          <div className="relative z-10 space-y-1 pr-24">
-            <h3 className="text-sm font-medium text-foreground">Route insights</h3>
-            <p className="text-xs text-muted-foreground/70">
-              Plan your route simply by getting each analysis on the optimal route and predict how
-              your journey would be.
-            </p>
-          </div>
-
-          {/* Truck artwork placed on bottom-right */}
-          <img
-            src="/assets/truck.svg"
-            alt="Truck"
-            className="absolute right-0 -bottom-1 w-40 h-auto pointer-events-none opacity-85 object-contain"
-          />
         </div>
-      </div>
+      )}
     </aside>
   );
 }

@@ -11,6 +11,7 @@ interface LocationAutocompleteInputProps {
   value: LocationCoordinate | null;
   onChange: (location: LocationCoordinate | null) => void;
   className?: string;
+  disabled?: boolean;
   isPickingOnMap?: boolean;
   onTogglePickOnMap?: () => void;
   iconType?: "origin" | "destination";
@@ -22,6 +23,7 @@ export function LocationAutocompleteInput({
   value,
   onChange,
   className,
+  disabled = false,
   isPickingOnMap = false,
   onTogglePickOnMap,
 }: LocationAutocompleteInputProps): React.JSX.Element {
@@ -168,22 +170,23 @@ export function LocationAutocompleteInput({
             }
           }}
           onFocus={() => {
-            if (inputValue.trim().length >= 2) {
+            if (!disabled && inputValue.trim().length >= 2) {
               setIsOpen(true);
             }
           }}
           onKeyDown={handleKeyDown}
+          disabled={disabled}
           placeholder={isPickingOnMap ? "Click on map to choose location..." : placeholder}
           autoComplete="off"
           className={cn(
-            "h-10 text-sm bg-background/70 border-input rounded-lg placeholder:text-muted-foreground/70 focus-visible:ring-1 focus-visible:ring-primary pr-14 transition-colors",
+            "h-10 text-sm bg-background/70 border-input rounded-lg placeholder:text-muted-foreground/70 focus-visible:ring-1 focus-visible:ring-primary pr-14 transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
             isPickingOnMap && "ring-1 ring-primary border-primary bg-primary/5",
           )}
         />
 
         {/* Action icons on right (no spinner here; the autocomplete box displays it) */}
         <div className="absolute right-1.5 flex items-center gap-0.5">
-          {inputValue && (
+          {!disabled && inputValue && (
             <button
               type="button"
               onClick={handleClear}
@@ -199,8 +202,9 @@ export function LocationAutocompleteInput({
             <button
               type="button"
               onClick={onTogglePickOnMap}
+              disabled={disabled}
               className={cn(
-                "flex size-6 items-center justify-center rounded-md transition-colors cursor-pointer",
+                "flex size-6 items-center justify-center rounded-md transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
                 isPickingOnMap
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/60",

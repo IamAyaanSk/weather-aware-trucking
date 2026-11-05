@@ -3,8 +3,9 @@ import { useMaplibre } from "../hooks/map/use-maplibre";
 import { useDraggableMarker } from "../hooks/map/use-draggable-marker";
 import { useMapPicker } from "../hooks/map/use-map-picker";
 import { useMapCamera } from "../hooks/map/use-map-camera";
+import { useRouteLines } from "../hooks/map/use-route-lines";
 import { createOriginMarkerElement, createDestinationMarkerElement } from "../lib/map-markers";
-import type { LocationCoordinate } from "../api/types";
+import type { LocationCoordinate, RouteItem } from "../api/types";
 import { cn } from "cn";
 
 interface RouteMapProps {
@@ -18,6 +19,10 @@ interface RouteMapProps {
   pickingTarget?: "origin" | "destination" | null;
   onPickLocation?: (target: "origin" | "destination", location: LocationCoordinate) => void;
   onCancelPick?: () => void;
+  isPlanning?: boolean;
+  routes?: RouteItem[];
+  selectedRouteId?: string | null;
+  onSelectRoute?: (routeId: string) => void;
 }
 
 export function RouteMap({
@@ -31,6 +36,10 @@ export function RouteMap({
   pickingTarget = null,
   onPickLocation,
   onCancelPick,
+  isPlanning = false,
+  routes,
+  selectedRouteId,
+  onSelectRoute,
 }: RouteMapProps): React.JSX.Element {
   const { containerRef, map } = useMaplibre({ initialCenter, initialZoom });
   const skipCameraAnimationRef = useRef(false);
@@ -46,6 +55,7 @@ export function RouteMap({
     onChange: onOriginChange,
     createMarkerElement: createOriginMarkerElement,
     onDragStateChange: markMapInteraction,
+    draggable: !isPlanning,
   });
 
   // Destination Marker
@@ -55,17 +65,26 @@ export function RouteMap({
     onChange: onDestinationChange,
     createMarkerElement: createDestinationMarkerElement,
     onDragStateChange: markMapInteraction,
+    draggable: !isPlanning,
   });
 
   // Map Click Picker Mode
   useMapPicker({
     map,
-    pickingTarget,
+    pickingTarget: isPlanning ? null : pickingTarget,
     onPickLocation,
     onUserMapInteraction: markMapInteraction,
   });
 
-  // Camera Framing & Bounds
+  // Route Lines Layer
+  useRouteLines({
+    map,
+    routes,
+    selectedRouteId,
+    onSelectRoute,
+  });
+
+  // Camera Framing & Bounds (only active when no routes drawn, as useRouteLines handles route bounds)
   useMapCamera({
     map,
     origin,
