@@ -1,5 +1,4 @@
-"""Pure Python domain logic for constructing the corridor heatmap.
-"""
+"""Pure Python domain logic for constructing the corridor heatmap."""
 
 import math
 from datetime import UTC, datetime, timedelta
@@ -18,8 +17,7 @@ def build_corridor_heatmap(
     load_weight_lbs: int,
     forecast_hours: int | None = None,
 ) -> CorridorHeatmap:
-    """Build a corridor heatmap from route checkpoints and Open-Meteo hourly forecasts.
-    """
+    """Build a corridor heatmap from route checkpoints and Open-Meteo hourly forecasts."""
     dep_utc = (
         departure_time.astimezone(UTC)
         if departure_time.tzinfo
@@ -34,7 +32,7 @@ def build_corridor_heatmap(
                     max_offset = cp.arrival_hour_offset
         forecast_hours = max(DEFAULT_FORECAST_HOURS, max_offset)
 
-    # 1. Deduplicate checkpoint coordinates across all routes rounded to 5 decimals
+    # Deduplicate checkpoint coordinates across all routes rounded to 5 decimals
     seen: set[tuple[float, float]] = set()
     unique_coords: list[tuple[float, float]] = []
     for cps in routes_checkpoints:
@@ -45,19 +43,17 @@ def build_corridor_heatmap(
                 unique_coords.append(coord)
 
     points: list[list[float]] = [[lat, lng] for lat, lng in unique_coords]
-
-    # Precompute target hour strings for offsets 0..forecast_hours anchored to departure time
+    
     target_hour_strs = [
         (dep_utc + timedelta(hours=h)).strftime('%Y-%m-%dT%H:00')
         for h in range(forecast_hours + 1)
     ]
-
-    # Initialize hourly_intensity with 0.0 for all points across all frames
+    
     hourly_intensity: dict[str, list[float]] = {
         str(h): [0.0] * len(unique_coords) for h in range(forecast_hours + 1)
     }
 
-    # 2. For each unique point, calculate risk score and intensity across all offsets
+    # For each unique point, calculate risk score and intensity across all offsets
     for pt_idx, coord in enumerate(unique_coords):
         hourly = point_forecasts.get(coord)
         if not hourly:

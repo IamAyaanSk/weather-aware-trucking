@@ -120,5 +120,3 @@ class CorridorHeatmap:
             'points': self.points,
             'hourly_intensity': self.hourly_intensity,
         }
-
-

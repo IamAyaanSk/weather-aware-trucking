@@ -159,9 +159,20 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
       enforces half-up arrival hour offset (`floor(travel_hours + 0.5)`), and guarantees segment miles
       sum strictly to route distance. Attached to `plan_route` view output.
 
-- [ ] **M1.5** `domain/aggregation.py`: §6.5 metrics and distance-weighted `avg_risk_score`.
-- [ ] **M1.6** `domain/ranking.py`: §6.7 sort key, No Travel never recommended, all-No-Travel →
+- [x] **M1.5** `domain/aggregation.py`: §6.5 metrics and distance-weighted `avg_risk_score`.
+
+      **Context (2026-11-05):** Pure Python domain module `domain/aggregation.py` implementing
+      `compute_route_metrics`. Aggregates risk miles for no_travel (score 4), severe (score 3),
+      high (score 2), moderate (score 1), and low (score 0), and computes distance-weighted
+      `avg_risk_score = round(sum(risk * segment_miles) / total_distance_miles, 2)`.
+
+- [x] **M1.6** `domain/ranking.py`: §6.7 sort key, No Travel never recommended, all-No-Travel →
       `recommended_route_id = null` + `no_safe_route` warning.
+
+      **Context (2026-11-05):** Pure Python domain module `domain/ranking.py` implementing
+      `rank_routes`. Sorts routes ascending by `(no_travel_miles, severe_miles, high_miles, avg_risk_score, total_duration_hours, source_index)`.
+      Selects first route with `no_travel_miles == 0` as recommended. If every route contains No Travel miles,
+      sets `recommended_route_id = None`, all `is_recommended = False`, and flags `no_safe_route = True`.
 - [x] **M1.7** `domain/heatmap.py`: 5-decimal dedupe, stable indices, 49 hourly arrays aligned to
       points, load-aware intensity.
 
@@ -262,13 +273,22 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
       checked in. The `apps/api/tests/` package remains empty for the later testing pass. Do not
       recreate these tests until that pass begins.
 
-- [ ] **M4.4** Add `services/analysis_cache.py` (or equivalent): canonical normalization,
+- [x] **M4.4** Add `services/analysis_cache.py` (or equivalent): canonical normalization,
       `sha256` hash including `PLAN_CACHE_VERSION` and truck profile version, 1-hour lookup scoped
       by `client_id`, `reused` flag.
-- [ ] **M4.5** Add request/response serializers matching §5 exactly; validate UTC ISO timestamps,
+
+      **Context (2026-11-05):** Canonical request dictionary normalization and SHA-256 hashing.
+      Queries latest cached `RouteAnalysis` within 1h TTL; returns deep copy with `reused=True`.
+
+- [x] **M4.5** Add request/response serializers matching §5 exactly; validate UTC ISO timestamps,
       past departures, 16-day limit, origin != destination, interval whitelist, load bounds.
-- [ ] **M4.6** Add `POST /api/v1/routes/plan/` (thin view; delegate to planner), `GET
+
+- [x] **M4.6** Add `POST /api/v1/routes/plan/` (thin view; delegate to planner), `GET
       /api/v1/analyses/` (newest first, limit 50), `GET /api/v1/analyses/{id}/` (client-scoped).
+
+      **Context (2026-11-05):** Added complete endpoint handlers for `plan_route`, `list_analyses`,
+      and `get_analysis` matching §5 contract, history retrieval, and 1-hour reuse. Mounted at
+      `/api/v1/routes/plan/`, `/api/v1/analyses/`, and `/api/v1/analyses/<uuid:analysis_id>/`.
 - [ ] **M4.7** Add the §5 error envelope and status mapping; never leak keys, raw bodies, or stack
       traces. Failed computation must not create a row.
 - [ ] **M4.8** Set `authentication_classes = []`, `AllowAny` on public views; keep CSRF for admin;

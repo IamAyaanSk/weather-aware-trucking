@@ -1,5 +1,4 @@
-"""Pure Python domain logic for weather risk scoring and grading.
-"""
+"""Pure Python domain logic for weather risk scoring and grading."""
 
 from apps.api.domain.types import CheckpointWeather, RiskLevel, RiskRule
 
