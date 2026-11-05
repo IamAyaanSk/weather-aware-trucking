@@ -251,3 +251,34 @@
 .maplibregl-ctrl-attrib a:hover {
   text-decoration: underline;
 }
+
+/* Custom Interactive Map Markers - Simple & Professional */
+.spotter-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+  cursor: grab;
+  transition: transform 0.12s ease-out;
+}
+
+.spotter-marker:active,
+.spotter-marker.is-dragging {
+  cursor: grabbing !important;
+  transform: scale(1.1) translateY(-4px);
+  z-index: 50 !important;
+}
+
+.spotter-marker-tooltip {
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

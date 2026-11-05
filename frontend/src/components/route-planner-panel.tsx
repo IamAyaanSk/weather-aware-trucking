@@ -2,14 +2,22 @@ import { useState } from "react";
 import { Button } from "#components/ui/button";
 import { Input } from "#components/ui/input";
 import { Separator } from "#components/ui/separator";
+import { LocationAutocompleteInput } from "./location-autocomplete-input";
+import type { LocationCoordinate } from "../api/types";
 import { ArrowUpDown } from "lucide-react";
 import { cn } from "cn";
 
 interface RoutePlannerPanelProps {
   className?: string;
+  origin: LocationCoordinate | null;
+  destination: LocationCoordinate | null;
+  onOriginChange: (location: LocationCoordinate | null) => void;
+  onDestinationChange: (location: LocationCoordinate | null) => void;
+  pickingTarget?: "origin" | "destination" | null;
+  onTogglePickOnMap?: (target: "origin" | "destination") => void;
   onPlanRoute?: (params: {
-    origin: string;
-    destination: string;
+    origin: LocationCoordinate;
+    destination: LocationCoordinate;
     loadWeightLbs: number;
     departureTime: string;
   }) => void;
@@ -28,19 +36,22 @@ function formatLocalDateTime(date: Date): string {
 
 export function RoutePlannerPanel({
   className,
+  origin,
+  destination,
+  onOriginChange,
+  onDestinationChange,
+  pickingTarget = null,
+  onTogglePickOnMap,
   onPlanRoute,
   isPending = false,
 }: RoutePlannerPanelProps): React.JSX.Element {
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
   const [loadWeightLbs, setLoadWeightLbs] = useState<number>(35000);
-  const [departureTime, setDepartureTime] = useState<string>(() =>
-    formatLocalDateTime(new Date()),
-  );
+  const [departureTime, setDepartureTime] = useState<string>(() => formatLocalDateTime(new Date()));
 
   const handleSwapLocations = () => {
-    setOrigin(destination);
-    setDestination(origin);
+    const tempOrigin = origin;
+    onOriginChange(destination);
+    onDestinationChange(tempOrigin);
   };
 
   const handleSetNow = () => {
@@ -49,12 +60,12 @@ export function RoutePlannerPanel({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!origin.trim() || !destination.trim()) {
+    if (!origin || !destination) {
       return;
     }
     onPlanRoute?.({
-      origin: origin.trim(),
-      destination: destination.trim(),
+      origin,
+      destination,
       loadWeightLbs,
       departureTime,
     });
@@ -104,31 +115,39 @@ export function RoutePlannerPanel({
               </svg>
             </div>
 
-            {/* Inputs Column */}
+            {/* Inputs Column with Photon Autocomplete */}
             <div className="flex-1 space-y-2.5 min-w-0">
               <div>
                 <label htmlFor="origin-input" className="sr-only">
                   Origin
                 </label>
-                <Input
+                <LocationAutocompleteInput
                   id="origin-input"
-                  value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
                   placeholder="Choose starting point..."
-                  className="h-10 text-sm bg-background/70 border-input rounded-lg placeholder:text-muted-foreground/70 focus-visible:ring-1 focus-visible:ring-primary"
+                  value={origin}
+                  onChange={onOriginChange}
+                  iconType="origin"
+                  isPickingOnMap={pickingTarget === "origin"}
+                  onTogglePickOnMap={
+                    onTogglePickOnMap ? () => onTogglePickOnMap("origin") : undefined
+                  }
                 />
               </div>
 
-              <div className="relative">
+              <div>
                 <label htmlFor="destination-input" className="sr-only">
                   Destination
                 </label>
-                <Input
+                <LocationAutocompleteInput
                   id="destination-input"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
                   placeholder="Choose destination..."
-                  className="h-10 pr-9 text-sm bg-background/70 border-input rounded-lg placeholder:text-muted-foreground/70 focus-visible:ring-1 focus-visible:ring-primary"
+                  value={destination}
+                  onChange={onDestinationChange}
+                  iconType="destination"
+                  isPickingOnMap={pickingTarget === "destination"}
+                  onTogglePickOnMap={
+                    onTogglePickOnMap ? () => onTogglePickOnMap("destination") : undefined
+                  }
                 />
               </div>
             </div>
@@ -152,10 +171,7 @@ export function RoutePlannerPanel({
           {/* Cargo Load Weight Field */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label
-                htmlFor="cargo-weight-input"
-                className="text-xs font-medium text-foreground"
-              >
+              <label htmlFor="cargo-weight-input" className="text-xs font-medium text-foreground">
                 Cargo load weight
               </label>
             </div>
@@ -167,9 +183,7 @@ export function RoutePlannerPanel({
                 max={80000}
                 step={500}
                 value={loadWeightLbs}
-                onChange={(e) =>
-                  setLoadWeightLbs(Math.max(0, Number(e.target.value) || 0))
-                }
+                onChange={(e) => setLoadWeightLbs(Math.max(0, Number(e.target.value) || 0))}
                 className="h-10 pr-12 text-sm bg-background/70 border-input rounded-lg focus-visible:ring-1 focus-visible:ring-primary"
               />
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
@@ -178,13 +192,10 @@ export function RoutePlannerPanel({
             </div>
           </div>
 
-          {/* Departure Time Field */}
+          {/* Departure Time Field - White calendar indicator */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label
-                htmlFor="departure-time-input"
-                className="text-xs font-medium text-foreground"
-              >
+              <label htmlFor="departure-time-input" className="text-xs font-medium text-foreground">
                 Departure time
               </label>
               <button
@@ -200,7 +211,7 @@ export function RoutePlannerPanel({
               type="datetime-local"
               value={departureTime}
               onChange={(e) => setDepartureTime(e.target.value)}
-              className="h-10 text-sm bg-background/70 border-input rounded-lg focus-visible:ring-1 focus-visible:ring-primary"
+              className="h-10 text-sm bg-background/70 border-input rounded-lg focus-visible:ring-1 focus-visible:ring-primary [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-85 hover:[&::-webkit-calendar-picker-indicator]:opacity-100"
             />
           </div>
 
@@ -208,8 +219,8 @@ export function RoutePlannerPanel({
           <div className="pt-1">
             <Button
               type="submit"
-              disabled={!origin.trim() || !destination.trim() || isPending}
-              className="w-full h-10 text-sm font-semibold rounded-lg shadow-sm cursor-pointer"
+              disabled={!origin || !destination || isPending}
+              className="w-full h-10 text-sm font-semibold rounded-lg shadow-sm cursor-pointer disabled:opacity-50"
             >
               {isPending ? "Getting route plan..." : "Get route plan"}
             </Button>
@@ -217,16 +228,14 @@ export function RoutePlannerPanel({
         </form>
       </div>
 
-      {/* Bottom Section: Risk Legend Card matching reference feel */}
+      {/* Bottom Section: Route Insights Card */}
       <div className="p-4 mt-auto shrink-0">
         <div className="relative h-38 overflow-hidden rounded-sm bg-background/60 p-4 shadow-xs">
           <div className="relative z-10 space-y-1 pr-24">
-            <h3 className="text-sm font-medium text-foreground">
-              Route insights
-            </h3>
+            <h3 className="text-sm font-medium text-foreground">Route insights</h3>
             <p className="text-xs text-muted-foreground/70">
-              Plan your route simply by getting each analysis on the optimal
-              route and predict how your journey would be.
+              Plan your route simply by getting each analysis on the optimal route and predict how
+              your journey would be.
             </p>
           </div>
 
