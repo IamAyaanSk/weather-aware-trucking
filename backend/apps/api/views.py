@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from apps.api.domain.checkpoints import generate_checkpoints_for_route
 from apps.api.serializers import PlanRequestSerializer
 from apps.api.services.analysis_cache import (
     build_reused_response,
@@ -58,5 +59,22 @@ def plan_route(request: Request) -> Response:
             departure_time=validated_data['departure_time'],
             load_weight_lbs=validated_data['load_weight_lbs'],
         )
+
+        departure_time = validated_data['departure_time']
+        snapped_origin = routes_data.get('snapped_origin')
+        snapped_destination = routes_data.get('snapped_destination')
+
+        for route in routes_data['routes']:
+            checkpoints = generate_checkpoints_for_route(
+                geometry=route['geometry'],
+                total_distance_miles=route['total_distance_miles'],
+                avg_speed_mph=route['avg_speed_mph'],
+                departure_time=departure_time,
+                segment_distances_meters=route.get('distance_annotations', []),
+                snapped_origin=snapped_origin,
+                snapped_destination=snapped_destination,
+                # ! Pass sample interval miles here if we decide to make this user controlled
+            )
+            route['checkpoints'] = [cp.to_dict() for cp in checkpoints]
 
         return Response(routes_data, status=status.HTTP_200_OK)

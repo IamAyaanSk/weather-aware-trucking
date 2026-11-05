@@ -1,9 +1,26 @@
-from typing import TypedDict
+from typing import Any, NotRequired, TypedDict
+
+
+# Checkpoint types
+class CheckpointDict(TypedDict):
+    index: int
+    mile_marker: float
+    lat: float
+    lng: float
+    segment_miles: float
+    eta_iso: str
+    arrival_hour_offset: int
+    arrival_weather: dict[str, Any] | None
 
 
 # Mapbox types
+class MapboxAnnotationData(TypedDict, total=False):
+    distance: list[float]
+
+
 class MapboxLegData(TypedDict, total=False):
     summary: str | None
+    annotation: MapboxAnnotationData | None
 
 
 class MapboxRouteData(TypedDict):
@@ -36,6 +53,8 @@ class ParsedRoute(TypedDict):
     avg_speed_mph: float
     geometry: str
     legs: list[MapboxLegData]
+    distance_annotations: NotRequired[list[float]]
+    checkpoints: NotRequired[list[CheckpointDict]]
 
 
 class SnappedCoordinate(TypedDict):

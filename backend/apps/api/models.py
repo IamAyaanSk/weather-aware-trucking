@@ -3,12 +3,6 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
-SAMPLE_INTERVAL_CHOICES = [
-    (10, '10 miles'),
-    (25, '25 miles'),
-    (50, '50 miles'),
-]
-
 
 class RouteAnalysis(models.Model):
     """A persisted route/weather analysis used for history and 1-hour reuse."""
@@ -21,9 +15,7 @@ class RouteAnalysis(models.Model):
     destination = models.CharField(max_length=255)
     departure_time = models.DateTimeField()
     load_weight_lbs = models.PositiveIntegerField()
-    sample_interval_miles = models.PositiveSmallIntegerField(
-        choices=SAMPLE_INTERVAL_CHOICES
-    )
+    sample_interval_miles = models.FloatField(null=True, blank=True)
 
     request_meta = models.JSONField()
     response_payload = models.JSONField()

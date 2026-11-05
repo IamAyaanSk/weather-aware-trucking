@@ -29,7 +29,6 @@ def normalize_plan_request(data: dict[str, Any]) -> dict[str, Any]:
         },
         'departure_time': departure_utc,
         'load_weight_lbs': int(data['load_weight_lbs']),
-        'sample_interval_miles': int(data['sample_interval_miles']),
         'cache_version': getattr(settings, 'PLAN_CACHE_VERSION', 'v1'),
         'truck_profile_version': getattr(settings, 'TRUCK_PROFILE_VERSION', 'v1'),
     }

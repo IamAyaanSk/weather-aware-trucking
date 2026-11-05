@@ -17,7 +17,7 @@
 
 ## 1. Product
 
-The user enters origin, destination, departure time, load weight (lbs), and a sampling interval (10, 25, or 50 miles). The app:
+The user enters origin, destination, departure time, and load weight (lbs). The sampling interval is automatically adjusted based on route distance (<=20 mi -> dist/2, 20-100 mi -> 10 mi, 100-200 mi -> 25 mi, >200 mi -> 50 mi). The app:
 
 1. Resolves origin and destination coordinates via a 2-step search in UI (user searches and presses Enter -> gets recommendations -> selects to retrieve coordinates), then sends coordinates to backend to get up to 3 truck routes from the Mapbox Directions API.
 2. Samples each route every _N_ miles.
@@ -128,7 +128,7 @@ backend/
 │       ├── exceptions.py
 │       ├── domain/
 │       │   ├── types.py
-│       │   ├── geo.py               # geopy geodesic + interpolation
+│       │   ├── geo.py               # polyline decoding + annotation odometer + interpolation
 │       │   ├── risk.py
 │       │   ├── checkpoints.py
 │       │   ├── aggregation.py
@@ -202,13 +202,12 @@ No authentication. History is scoped by an anonymous `X-Client-Id` header (UUID 
     "lng": -104.9903
   },
   "departure_time": "2026-11-04T14:00:00Z",
-  "load_weight_lbs": 35000,
-  "sample_interval_miles": 25
+  "load_weight_lbs": 35000
 }
 ```
 
 - `departure_time`: ISO 8601 with offset. Normalize to UTC internally.
-- `sample_interval_miles`: `10`, `25`, or `50`.
+- `sampling_interval`: automatically determined by backend based on route distance (`<=20` mi -> dist/2, `20–100` mi -> 10 mi, `100–200` mi -> 25 mi, `>200` mi -> 50 mi); not passed by user.
 - `load_weight_lbs`: integer, `>= 0`; sanity upper bound documented in serializer.
 - `origin`/`destination`: objects containing `name` (string for display and history), `lat` (float, -90..90), and `lng` (float, -180..180). Passed directly to Mapbox Directions (`/driving-traffic/{origin.lng},{origin.lat};{dest.lng},{dest.lat}`). No server-side geocoding required in the routing flow.
 - Reject origin == destination (within 0.001°), naive datetimes, past departures, and departures beyond Open-Meteo's 16-day forecast range.
@@ -260,7 +259,6 @@ No authentication. History is scoped by an anonymous `X-Client-Id` header (UUID 
           "mile_marker": 0.0,
           "lat": 41.8781,
           "lng": -87.6298,
-          "heatmap_point_index": 0,
           "eta_iso": "2026-11-04T14:00:00Z",
           "arrival_hour_offset": 0,
           "arrival_weather": {
@@ -297,7 +295,7 @@ Contract notes:
 - `rule_triggered` is `null` for Low, otherwise one of `WIND`, `RAIN`, `SNOW`, `WIND_LOAD`. Ties resolve in order: `WIND_LOAD`, `WIND`, `RAIN`, `SNOW`.
 - `metrics.avg_risk_score` is the distance-weighted average risk in `0..4`.
 - `arrival_hour_offset` is a non-negative integer. It may exceed 48 for long trips; the heatmap remains `0..48`.
-- `corridor_heatmap.hourly_intensity` has keys `"0"` through `"48"`; each array aligns by index with `points`. `checkpoints[].heatmap_point_index` points into that array.
+- `corridor_heatmap.hourly_intensity` has keys `"0"` through `"48"`; each array aligns by index with `points`.
 - `overview_polyline` is Mapbox's encoded polyline from `routes[].geometry`, requested with
   `geometries=polyline` (precision 5, same encoding Google used). Frontend decodes with
   `@mapbox/polyline`; backend decodes with Python `polyline`.
@@ -364,7 +362,7 @@ Never expose API keys, raw upstream bodies, or stack traces.
 - `FORECAST_HOURS = 48`; heatmap offsets `0..48` inclusive (49 samples).
 - `MAX_ROUTES = 3`; intervals `(10, 25, 50)`. Mapbox can return at most 1 primary + 2 alternatives,
   so 3 is the ceiling, not a guarantee.
-- Use `geopy.distance.geodesic` for all geodesic distances.
+- Use Mapbox `annotations=distance` directly for segment distances; no geopy or scaling needed.
 - Use Python `polyline` to decode `overview_polyline` (precision 5).
 - Truck limits sent to Mapbox: `max_height` and `max_width` in **meters**, `max_weight` in **metric
   tons**. Convert from mm and lb; never send the raw imperial values.
@@ -415,12 +413,18 @@ avg_speed_mph = distance_miles / duration_hours
 Guard non-finite/zero values. Require `route.duration`; if it is absent, fall back to
 `duration_typical` and warn, and fail with 502 if both are missing.
 
-Decode the polyline. Compute cumulative geodesic distance between consecutive vertices with `geopy`.
-If the cumulative length differs from Mapbox's `route.distance`, scale it so the final cumulative
-distance equals `distance_miles`. Compute distances once per route and reuse them for checkpoint
-interpolation; do not recompute geodesic distance for every checkpoint.
+Decode the polyline. Mapbox Directions API provides `annotations=distance` containing the segment
+distances in meters between consecutive vertices. Accumulate these segment distances directly to build
+the cumulative distance odometer, with no geodesic calculation or scaling needed. Reuse this cumulative
+array for checkpoint interpolation.
 
 ### 6.4 Checkpoints
+
+Sampling interval is automatically determined by route distance:
+- `dist <= 20`: checkpoint at `total_dist / 2` (checkpoints at 0, dist / 2, destination)
+- `20 < dist <= 100`: interval = `10` miles
+- `100 < dist <= 200`: interval = `25` miles
+- `dist > 200`: interval = `50` miles
 
 Create checkpoints at:
 
@@ -482,7 +486,6 @@ Interpolate along checkpoints at that distance. The truck stops at the destinati
 
 - Deduplicate checkpoint coordinates across all routes, rounded to 5 decimals.
 - `corridor_heatmap.points` is the unique coordinate list.
-- Each checkpoint stores its `heatmap_point_index`.
 - For each point and each offset `0..48`, compute the load-aware risk score and `intensity = score / 4.0`.
 - `hourly_intensity["h"]` is an array aligned with `points`.
 - The heatmap is anchored to departure time, not each route's ETA.
@@ -504,6 +507,7 @@ GET https://api.mapbox.com/directions/v5/mapbox/driving-traffic/{lng},{lat};{lng
   &geometries=polyline
   &overview=full
   &steps=false
+  &annotations=distance
   &notifications=all
   &depart_at=2026-11-04T14:00:00Z
   &max_height=4.114
@@ -801,7 +805,7 @@ Never commit `.env` or keys. Backend `MAPBOX_ACCESS_TOKEN` is a server-side secr
 ## 11. Code quality
 
 - Backend: type hints, dataclasses, pure domain functions, `zoneinfo`/UTC, `httpx` timeouts, narrow exceptions, structured logs with request ID, no keys in logs.
-- Use `polyline.decode` and `geopy.distance.geodesic`; do not reimplement either.
+- Use `polyline.decode` and Mapbox distance annotations; do not reimplement either.
 - Frontend: strict TypeScript, no `any`, `import type`, stable keys, cleanup effects/rAF, `AbortController`.
 - Keep map code imperative and isolated from React render state.
 - Small focused commits: `feat:`, `fix:`, `test:`, `docs:`, `chore:`, `refactor:`.
@@ -849,7 +853,7 @@ Acceptance: `POST /plan` returns the §5 shape; same request within 1h returns `
 3. **Location search & direct coordinates.** Handled client-side using Mapbox Search Box API with a public token (`VITE_MAPBOX_PUBLIC_TOKEN`). User searches on Enter to get suggestions and selects to retrieve coordinates (2 requests per point). The plan endpoint takes coordinates directly and sends them straight to Mapbox Directions without server-side geocoding.
 4. **Forecast.** 49 inclusive hourly samples (`0..48`) for the heatmap/slider. Extend checkpoint weather beyond 48h for long trips, up to Open-Meteo's 16-day limit.
 5. **Hosting.** Deferred; decide later.
-6. **Polyline/geodesic.** Python `polyline` and `geopy.distance.geodesic` on the backend; `@mapbox/polyline` on the frontend.
+6. **Polyline/distance.** Mapbox distance annotations (`annotations=distance`) and Python `polyline` on the backend; `@mapbox/polyline` on the frontend.
 7. **Persistence.** Store analyses, list them, and reuse an identical request within 1 hour.
 8. **Response shape.** Follow §5, with the small history/state additions.
 

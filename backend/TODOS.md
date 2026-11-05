@@ -127,14 +127,33 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
 
 ## M1 — Domain + tests
 
-- [ ] **M1.1** `domain/types.py`: enums/dataclasses for risk level, checkpoint, route, metrics,
+- [x] **M1.1** `domain/types.py`: enums/dataclasses for risk level, checkpoint, route, metrics,
       heatmap, and warnings.
-- [ ] **M1.2** `domain/geo.py`: decode with `polyline`, cumulative `geopy.distance.geodesic`,
-      scale to the provider's route distance, interpolate a coordinate at a target distance.
+
+      **Context (2026-11-05):** Pure Python dataclasses and enums (`RiskLevel`, `RiskRule`,
+      `Coordinate`, `CheckpointWeather`, `Checkpoint`, `RouteMetrics`, `DomainWarning`) with
+      clean `.to_dict()` helpers.
+
+- [x] **M1.2** `domain/geo.py`: decode with `polyline`, cumulative distances from Mapbox
+      `annotations=distance`, interpolate a coordinate at a target distance.
+
+      **Context (2026-11-05):** Revamped `RouteOdometer` to build cumulative distances directly
+      from Mapbox `annotations=distance` (in meters, converted to miles). Removed geopy geodesic
+      calculations and scaling. Binary-search segment interpolation for coordinates rounded to 5
+      decimals per §6.9.
+
 - [ ] **M1.3** `domain/risk.py`: wind/rain/snow thresholds (`AGENTS.md` §6.2) with inclusive
       boundaries, load overrides, `max()` combination, and deterministic `rule_triggered` ties.
-- [ ] **M1.4** `domain/checkpoints.py`: 10/25/50-mile sampling, no duplicate destination, half-up
-      hour offsets, segment miles summing to the route distance.
+- [x] **M1.4** `domain/checkpoints.py`: automatic distance-based sampling (<=20 mi -> dist/2,
+      20-100 mi -> 10 mi, 100-200 mi -> 25 mi, >200 mi -> 50 mi), no duplicate destination, half-up
+      hour offsets, segment miles summing to route distance.
+
+      **Context (2026-11-05):** Implemented `determine_sample_interval_miles`, `calculate_target_distances`,
+      and `generate_checkpoints`. Automatically adjusts sampling without receiving parameter from user.
+      Preserves snapped coordinates for endpoints, prevents duplicate destination on exact multiples,
+      enforces half-up arrival hour offset (`floor(travel_hours + 0.5)`), and guarantees segment miles
+      sum strictly to route distance. Attached to `plan_route` view output.
+
 - [ ] **M1.5** `domain/aggregation.py`: §6.5 metrics and distance-weighted `avg_risk_score`.
 - [ ] **M1.6** `domain/ranking.py`: §6.7 sort key, No Travel never recommended, all-No-Travel →
       `recommended_route_id = null` + `no_safe_route` warning.

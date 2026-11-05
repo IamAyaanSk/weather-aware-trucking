@@ -99,6 +99,7 @@ def fetch_mapbox_routes(
         'geometries': 'polyline',
         'overview': 'full',
         'steps': 'false',
+        'annotations': 'distance',
         'notifications': 'none',
         'depart_at': depart_at_str,
         'max_height': height_m,
@@ -185,6 +186,15 @@ def fetch_mapbox_routes(
 
         geometry = r['geometry']
 
+        # Extract segment distance annotations (in meters) across all legs
+        distance_annotations: list[float] = []
+        for leg in legs:
+            ann = leg.get('annotation')
+            if ann and isinstance(ann, dict):
+                dist_list = ann.get('distance')
+                if dist_list and isinstance(dist_list, list):
+                    distance_annotations.extend(dist_list)
+
         parsed_routes.append(
             {
                 'id': route_id,
@@ -197,6 +207,7 @@ def fetch_mapbox_routes(
                 'avg_speed_mph': round(avg_speed_mph, 1),
                 'geometry': geometry,
                 'legs': legs,
+                'distance_annotations': distance_annotations,
             }
         )
 
