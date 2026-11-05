@@ -2,7 +2,7 @@ import copy
 import hashlib
 import json
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from django.conf import settings
 from django.utils import timezone
@@ -61,6 +61,8 @@ def get_cached_analysis(client_id: str, request_hash: str) -> RouteAnalysis | No
 
 def build_reused_response(analysis: RouteAnalysis) -> dict[str, Any]:
     """Return a deep copy of the stored response_payload with reused set to true."""
-    payload = copy.deepcopy(analysis.response_payload)
+    payload: dict[str, Any] = copy.deepcopy(
+        cast(dict[str, Any], analysis.response_payload)
+    )
     payload['reused'] = True
     return payload

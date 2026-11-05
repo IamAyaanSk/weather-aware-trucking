@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 from django.http import Http404
+from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.response import Response
@@ -15,7 +16,7 @@ class UnprocessableEntityError(APIException):
 
     status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     default_code = 'unprocessable_entity'
-    default_detail = 'Unable to process route request.'
+    default_detail = _('Unable to process route request.')
 
 
 class UpstreamServiceError(APIException):
@@ -23,7 +24,7 @@ class UpstreamServiceError(APIException):
 
     status_code = status.HTTP_502_BAD_GATEWAY
     default_code = 'upstream_error'
-    default_detail = 'Upstream service error.'
+    default_detail = _('Upstream service error.')
 
 
 class UpstreamTimeoutError(APIException):
@@ -31,7 +32,7 @@ class UpstreamTimeoutError(APIException):
 
     status_code = status.HTTP_504_GATEWAY_TIMEOUT
     default_code = 'upstream_timeout'
-    default_detail = 'Upstream service timed out.'
+    default_detail = _('Upstream service timed out.')
 
 
 class UpstreamRateLimitError(APIException):
@@ -39,7 +40,7 @@ class UpstreamRateLimitError(APIException):
 
     status_code = status.HTTP_429_TOO_MANY_REQUESTS
     default_code = 'upstream_rate_limit'
-    default_detail = 'Upstream rate limit exceeded.'
+    default_detail = _('Upstream rate limit exceeded.')
 
 
 def _format_error_detail(detail: Any) -> str:

@@ -1,6 +1,7 @@
 """Pure Python domain logic for constructing the corridor heatmap."""
 
 import math
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -12,7 +13,7 @@ DEFAULT_FORECAST_HOURS = 48
 
 def build_corridor_heatmap(
     routes_checkpoints: list[list[Checkpoint]],
-    point_forecasts: dict[tuple[float, float], dict[str, Any]],
+    point_forecasts: Mapping[tuple[float, float], Mapping[str, Any]],
     departure_time: datetime,
     load_weight_lbs: int,
     forecast_hours: int | None = None,

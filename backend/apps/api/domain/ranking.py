@@ -1,14 +1,15 @@
 """Pure Python domain logic for route ranking and recommendation."""
 
+from collections.abc import Sequence
 from typing import Any
 
 
 def rank_routes(
-    routes: list[dict[str, Any]],
-) -> tuple[list[dict[str, Any]], str | None, bool]:
+    routes: Sequence[Any],
+) -> tuple[list[Any], str | None, bool]:
     """Sort routes ascending by ranking tuple and determine the recommended route."""
 
-    def _sort_key(r: dict[str, Any]) -> tuple[float, float, float, float, float, int]:
+    def _sort_key(r: Any) -> tuple[float, float, float, float, float, int]:
         metrics = r['metrics']
         return (
             float(metrics['no_travel_miles']),
@@ -19,7 +20,7 @@ def rank_routes(
             int(r.get('source_index', 0)),
         )
 
-    ranked = sorted(routes, key=_sort_key)
+    ranked: list[Any] = sorted(routes, key=_sort_key)
 
     recommended_route_id: str | None = None
     for r in ranked:

@@ -153,33 +153,6 @@ class MapboxRouteSerializer(serializers.Serializer):
 
         return attrs
 
-        if not points:
-            raise serializers.ValidationError('Route geometry cannot be empty.')
-
-        legs = attrs.get('legs', [])
-        total_annotation_distances = 0
-        has_annotation = False
-
-        for leg in legs:
-            ann = leg.get('annotation')
-            if ann and 'distance' in ann:
-                has_annotation = True
-                total_annotation_distances += len(ann['distance'])
-
-        expected_segments = max(0, len(points) - 1)
-        if expected_segments > 0 and not has_annotation:
-            raise serializers.ValidationError(
-                'Route is missing required distance annotations.'
-            )
-
-        if total_annotation_distances != expected_segments:
-            raise serializers.ValidationError(
-                f'Distance annotations count ({total_annotation_distances}) does not match '
-                f'geometry segment count ({expected_segments}).'
-            )
-
-        return attrs
-
 
 class MapboxWaypointSerializer(serializers.Serializer):
     """Serializer for snapped waypoint locations [lng, lat]."""

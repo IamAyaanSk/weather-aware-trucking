@@ -1,5 +1,7 @@
 import math
+from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from apps.api.domain.geo import RouteOdometer
 from apps.api.domain.types import Checkpoint
@@ -55,13 +57,13 @@ def calculate_target_distances(
 
 
 def _extract_coordinate(
-    coord: tuple[float, float] | dict[str, float] | None,
+    coord: tuple[float, float] | Mapping[str, Any] | None,
 ) -> tuple[float, float] | None:
     """Normalize coordinate input to (lat, lng) tuple."""
 
     if coord is None:
         return None
-    if isinstance(coord, dict):
+    if isinstance(coord, Mapping):
         return (float(coord['lat']), float(coord['lng']))
     if isinstance(coord, (list, tuple)) and len(coord) >= 2:
         return (float(coord[0]), float(coord[1]))
@@ -74,8 +76,8 @@ def generate_checkpoints(
     avg_speed_mph: float,
     departure_time: datetime,
     sample_interval_miles: int | float | None = None,
-    snapped_origin: tuple[float, float] | dict[str, float] | None = None,
-    snapped_destination: tuple[float, float] | dict[str, float] | None = None,
+    snapped_origin: tuple[float, float] | Mapping[str, Any] | None = None,
+    snapped_destination: tuple[float, float] | Mapping[str, Any] | None = None,
 ) -> list[Checkpoint]:
     """Generate route checkpoints per AGENTS.md §6.4.
 
@@ -152,8 +154,8 @@ def generate_checkpoints_for_route(
     departure_time: datetime,
     segment_distances_meters: list[float] | None = None,
     sample_interval_miles: int | float | None = None,
-    snapped_origin: tuple[float, float] | dict[str, float] | None = None,
-    snapped_destination: tuple[float, float] | dict[str, float] | None = None,
+    snapped_origin: tuple[float, float] | Mapping[str, Any] | None = None,
+    snapped_destination: tuple[float, float] | Mapping[str, Any] | None = None,
 ) -> list[Checkpoint]:
     """Convenience function to build RouteOdometer from annotations and generate checkpoints for a route."""
     odometer = RouteOdometer.from_polyline(

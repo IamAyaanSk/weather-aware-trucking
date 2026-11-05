@@ -157,7 +157,7 @@ def plan_route(request: Request) -> Response:
         for r in ranked_routes
     ]
 
-    analysis_id: uuid.UUID = str(uuid.uuid4())
+    analysis_id: str = str(uuid.uuid4())
     created_at_dt = timezone.now()
     created_at_iso = created_at_dt.astimezone(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
     departure_time_iso = departure_time.astimezone(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')

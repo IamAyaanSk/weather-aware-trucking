@@ -2,7 +2,7 @@ import concurrent.futures
 import logging
 import math
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from django.conf import settings
 
@@ -45,7 +45,9 @@ def validate_open_meteo_response(
             raise UpstreamServiceError(
                 'Invalid response structure received from Open-Meteo API.'
             )
-        validated_forecasts.append(serializer.validated_data)
+        validated_forecasts.append(
+            cast(OpenMeteoLocationForecastData, serializer.validated_data)
+        )
 
     return validated_forecasts
 

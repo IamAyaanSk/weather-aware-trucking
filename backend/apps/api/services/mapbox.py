@@ -1,6 +1,6 @@
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from django.conf import settings
 
@@ -43,7 +43,7 @@ def validate_mapbox_response(raw_data: Any) -> MapboxResponseData:
             'Invalid response structure received from Mapbox Directions API.'
         )
 
-    return serializer.validated_data
+    return cast(MapboxResponseData, serializer.validated_data)
 
 
 def calculate_truck_dimensions(

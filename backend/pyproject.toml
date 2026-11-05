@@ -33,3 +33,7 @@ quote-style = "single"
 python-interpreter-path = ".venv/bin/python"
 search-path = ["."]
 
+[tool.pyrefly.errors]
+bad-override = "ignore"
+untyped-import = "ignore"
+

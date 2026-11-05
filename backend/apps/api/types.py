@@ -54,7 +54,9 @@ class ParsedRoute(TypedDict):
     geometry: str
     legs: list[MapboxLegData]
     distance_annotations: NotRequired[list[float]]
-    checkpoints: NotRequired[list[CheckpointDict]]
+    checkpoints: NotRequired[list[CheckpointDict] | list[dict[str, Any]]]
+    metrics: NotRequired[dict[str, Any]]
+    is_recommended: NotRequired[bool]
 
 
 class SnappedCoordinate(TypedDict):

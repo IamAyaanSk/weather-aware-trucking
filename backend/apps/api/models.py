@@ -27,6 +27,8 @@ class RouteAnalysis(models.Model):
 
     created_at = models.DateTimeField(default=timezone.now, db_index=True)
 
+    objects = models.Manager()
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
