@@ -6,8 +6,8 @@ export function AppLayout(): React.JSX.Element {
   return (
     <SidebarProvider defaultOpen={false} open={false}>
       <AppSidebar />
-      <SidebarInset className="flex min-h-screen flex-1 flex-col bg-background text-foreground">
-        <main className="flex-1 overflow-auto">
+      <SidebarInset className="flex h-screen flex-1 flex-col overflow-hidden bg-background text-foreground">
+        <main className="relative flex-1 h-full overflow-hidden">
           <Outlet />
         </main>
       </SidebarInset>
