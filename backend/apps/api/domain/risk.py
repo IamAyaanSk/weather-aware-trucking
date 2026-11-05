@@ -1,6 +1,4 @@
 """Pure Python domain logic for weather risk scoring and grading.
-
-Conforms to AGENTS.md §6.2. No Django, DRF, httpx, or settings imports.
 """
 
 from apps.api.domain.types import CheckpointWeather, RiskLevel, RiskRule
@@ -15,8 +13,7 @@ SCORE_TO_RISK_LEVEL = {
 
 
 def grade_wind(wind_mph: float, load_weight_lbs: int) -> tuple[int, int]:
-    """Calculate base and load-adjusted wind risk scores (0..4).
-    """
+    """Calculate base and load-adjusted wind risk scores (0..4)."""
     if wind_mph < 25.0:
         wind_base = 0
     elif wind_mph < 35.0:
@@ -41,8 +38,7 @@ def grade_wind(wind_mph: float, load_weight_lbs: int) -> tuple[int, int]:
 
 
 def grade_rain(rain_in_hr: float) -> int:
-    """Calculate rain risk score (0..4).
-    """
+    """Calculate rain risk score (0..4)."""
     if rain_in_hr < 0.10:
         return 0
     if rain_in_hr < 0.25:
@@ -55,9 +51,7 @@ def grade_rain(rain_in_hr: float) -> int:
 
 
 def grade_snow(snow_in_hr: float) -> int:
-    """Calculate snow risk score (0..4).
-
-    """
+    """Calculate snow risk score (0..4)."""
     if snow_in_hr < 0.5:
         return 0
     if snow_in_hr < 1.0:

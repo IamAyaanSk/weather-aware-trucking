@@ -67,11 +67,18 @@ class RouteWarning(TypedDict):
     message: str
 
 
+class CorridorHeatmapData(TypedDict):
+    intensity_max: float
+    points: list[list[float]]
+    hourly_intensity: dict[str, list[float]]
+
+
 class MapboxRoutesResult(TypedDict):
     routes: list[ParsedRoute]
     snapped_origin: SnappedCoordinate
     snapped_destination: SnappedCoordinate
     warnings: list[RouteWarning]
+    corridor_heatmap: NotRequired[CorridorHeatmapData]
 
 
 # Open-Meteo types

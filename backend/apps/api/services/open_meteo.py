@@ -11,7 +11,7 @@ from apps.api.domain.types import Checkpoint
 from apps.api.exceptions import UpstreamServiceError
 from apps.api.serializers import OpenMeteoLocationForecastSerializer
 from apps.api.services.http import request_with_retry
-from apps.api.types import OpenMeteoLocationForecastData
+from apps.api.types import OpenMeteoHourlyData, OpenMeteoLocationForecastData
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +54,11 @@ def fetch_weather_for_route_checkpoints(
     checkpoints: list[Checkpoint],
     departure_time: datetime,
     load_weight_lbs: int,
-) -> None:
+    forecast_hours: int | None = None,
+) -> dict[tuple[float, float], OpenMeteoHourlyData]:
     """Fetch Open-Meteo weather for all checkpoints of a route in a single batch request."""
     if not checkpoints:
-        return
+        return {}
 
     dep_utc = (
         departure_time.astimezone(UTC)
@@ -67,9 +68,10 @@ def fetch_weather_for_route_checkpoints(
 
     start_hour_str = dep_utc.strftime('%Y-%m-%dT%H:00')
 
-    # Check if trip is greater than 48 hrs --> We need to account the extra time too for accurate results and forecast
-    max_arrival_offset = max(cp.arrival_hour_offset for cp in checkpoints)
-    forecast_hours = max(48, max_arrival_offset)
+    # Account for trips > 48 hrs for full corridor forecast coverage
+    if forecast_hours is None:
+        max_arrival_offset = max(cp.arrival_hour_offset for cp in checkpoints)
+        forecast_hours = max(48, max_arrival_offset)
 
     end_time = dep_utc + timedelta(hours=forecast_hours)
     end_hour_str = end_time.strftime('%Y-%m-%dT%H:00')
@@ -116,8 +118,13 @@ def fetch_weather_for_route_checkpoints(
             'Incomplete weather response received from weather provider.'
         )
 
+    point_forecasts: dict[tuple[float, float], OpenMeteoHourlyData] = {}
+
     for cp, forecast in zip(checkpoints, forecasts, strict=True):
         hourly = forecast['hourly']
+        coord_key = (round(cp.lat, 5), round(cp.lng, 5))
+        point_forecasts[coord_key] = hourly
+
         time_to_idx = {t: idx for idx, t in enumerate(hourly['time'])}
 
         # Validate timestamp by value
@@ -173,19 +180,32 @@ def fetch_weather_for_route_checkpoints(
             temperature_f=float(temp_raw),
         )
 
+    return point_forecasts
+
 
 def fetch_weather_for_routes(
     routes_checkpoints: list[list[Checkpoint]],
     departure_time: datetime,
     load_weight_lbs: int,
-) -> None:
+    forecast_hours: int | None = None,
+) -> dict[tuple[float, float], OpenMeteoHourlyData]:
     """Fetch weather for multiple routes concurrently, batching each route's checkpoints into 1 request.
 
     3 routes -> 3 requests executed with bounded concurrency.
+    Returns mapping from (lat, lng) to OpenMeteoHourlyData for heatmap corridor construction.
     """
     if not routes_checkpoints:
-        return
+        return {}
 
+    if forecast_hours is None:
+        max_offset = 0
+        for cps in routes_checkpoints:
+            for cp in cps:
+                if cp.arrival_hour_offset > max_offset:
+                    max_offset = cp.arrival_hour_offset
+        forecast_hours = max(48, max_offset)
+
+    all_point_forecasts: dict[tuple[float, float], OpenMeteoHourlyData] = {}
     workers = min(len(routes_checkpoints), 4)
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [
@@ -194,8 +214,11 @@ def fetch_weather_for_routes(
                 cps,
                 departure_time,
                 load_weight_lbs,
+                forecast_hours,
             )
             for cps in routes_checkpoints
         ]
         for future in concurrent.futures.as_completed(futures):
-            future.result()
+            all_point_forecasts.update(future.result())
+
+    return all_point_forecasts

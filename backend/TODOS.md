@@ -162,8 +162,17 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
 - [ ] **M1.5** `domain/aggregation.py`: §6.5 metrics and distance-weighted `avg_risk_score`.
 - [ ] **M1.6** `domain/ranking.py`: §6.7 sort key, No Travel never recommended, all-No-Travel →
       `recommended_route_id = null` + `no_safe_route` warning.
-- [ ] **M1.7** `domain/heatmap.py`: 5-decimal dedupe, stable indices, 49 hourly arrays aligned to
+- [x] **M1.7** `domain/heatmap.py`: 5-decimal dedupe, stable indices, 49 hourly arrays aligned to
       points, load-aware intensity.
+
+      **Context (2026-11-05):** Pure Python domain module `domain/heatmap.py` implementing
+      `build_corridor_heatmap`. Deduplicates checkpoint coordinates across all routes rounded to
+      5 decimals preserving first-seen order. Dynamically scales forecast hours to `max(48, longest arrival_offset)`
+      generating frames anchored to departure time (`"0"` through `str(forecast_hours)`).
+      Computes load-aware risk intensity `score / 4.0` in `[0.0, 1.0]` aligned index-for-index
+      with `points`. Open-Meteo batch fetching in `services/open_meteo.py` queries up to the same
+      forecast limit so all corridor points have full coverage for trips > 48 hours. Attached to
+      `plan_route` view response.
 - [ ] **M1.8** Boundary tests for every risk threshold (just below / at / just above), load
       overrides at exactly 30,000 and 40,000 lb, and every `rule_triggered` tie.
 - [ ] **M1.9** Checkpoint tests for intervals 10/25/50, exact multiples, one-checkpoint routes, and

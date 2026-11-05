@@ -106,3 +106,19 @@ class DomainWarning:
 
     def to_dict(self) -> dict[str, str]:
         return {'code': self.code, 'message': self.message}
+
+
+@dataclass
+class CorridorHeatmap:
+    intensity_max: float
+    points: list[list[float]]
+    hourly_intensity: dict[str, list[float]]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            'intensity_max': self.intensity_max,
+            'points': self.points,
+            'hourly_intensity': self.hourly_intensity,
+        }
+
+

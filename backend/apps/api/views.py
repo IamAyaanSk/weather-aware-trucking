@@ -9,6 +9,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.api.domain.checkpoints import generate_checkpoints_for_route
+from apps.api.domain.heatmap import build_corridor_heatmap
 from apps.api.domain.types import Checkpoint
 from apps.api.serializers import PlanRequestSerializer
 from apps.api.services.analysis_cache import (
@@ -81,7 +82,7 @@ def plan_route(request: Request) -> Response:
             )
             routes_checkpoints.append(cps)
 
-        fetch_weather_for_routes(
+        point_forecasts = fetch_weather_for_routes(
             routes_checkpoints=routes_checkpoints,
             departure_time=departure_time,
             load_weight_lbs=validated_data['load_weight_lbs'],
@@ -89,5 +90,13 @@ def plan_route(request: Request) -> Response:
 
         for route, cps in zip(routes, routes_checkpoints, strict=True):
             route['checkpoints'] = [cp.to_dict() for cp in cps]
+
+        corridor_heatmap = build_corridor_heatmap(
+            routes_checkpoints=routes_checkpoints,
+            point_forecasts=point_forecasts,
+            departure_time=departure_time,
+            load_weight_lbs=validated_data['load_weight_lbs'],
+        )
+        routes_data['corridor_heatmap'] = corridor_heatmap.to_dict()
 
         return Response(routes_data, status=status.HTTP_200_OK)
