@@ -83,6 +83,10 @@ class MapboxRoutesResult(TypedDict):
     corridor_heatmap: NotRequired[CorridorHeatmapData]
 
 
+# Generic routing result alias
+RoutesResult = MapboxRoutesResult
+
+
 # Open-Meteo types
 class OpenMeteoHourlyData(TypedDict):
     time: list[str]

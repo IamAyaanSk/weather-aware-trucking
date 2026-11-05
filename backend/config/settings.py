@@ -167,6 +167,19 @@ PLAN_CACHE_TTL_SECONDS = int(os.getenv('PLAN_CACHE_TTL_SECONDS', '3600'))
 PLAN_CACHE_VERSION = os.getenv('PLAN_CACHE_VERSION', 'v1')
 TRUCK_PROFILE_VERSION = os.getenv('TRUCK_PROFILE_VERSION', 'v1')
 
+# Routing provider selection: 'tomtom' or 'mapbox'
+ROUTING_PROVIDER = os.getenv(
+    'ROUTING_PROVIDER', 'tomtom' if os.getenv('TOMTOM_API_KEY') else 'mapbox'
+)
+
+# TomTom Routing API settings
+TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY', '')
+TOMTOM_ROUTING_BASE_URL = os.getenv(
+    'TOMTOM_ROUTING_BASE_URL', 'https://api.tomtom.com/routing/1'
+)
+TOMTOM_LANGUAGE = os.getenv('TOMTOM_LANGUAGE', 'en-US')
+TOMTOM_MAX_ALTERNATIVES = int(os.getenv('TOMTOM_MAX_ALTERNATIVES', '3'))
+
 # Mapbox Directions API settings
 MAPBOX_ACCESS_TOKEN = os.getenv('MAPBOX_ACCESS_TOKEN', '')
 MAPBOX_DIRECTIONS_BASE_URL = os.getenv(

@@ -2,8 +2,33 @@ import bisect
 from dataclasses import dataclass, field
 
 import polyline
+from geopy.distance import great_circle
 
 METERS_TO_MILES = 1609.344
+
+
+def calculate_segment_distances_meters(
+    points: list[tuple[float, float]],
+    target_total_meters: float | None = None,
+) -> list[float]:
+    """Calculate segment distances in meters between consecutive points using geopy.great_circle.
+
+    If target_total_meters is provided and positive, segment lengths are scaled
+    proportionally so their sum matches the target total distance exactly.
+    """
+    if len(points) <= 1:
+        return []
+
+    raw_segments: list[float] = [
+        great_circle(points[i], points[i + 1]).meters for i in range(len(points) - 1)
+    ]
+
+    total_raw = sum(raw_segments)
+    if target_total_meters is not None and target_total_meters > 0 and total_raw > 0:
+        scale = target_total_meters / total_raw
+        return [round(seg * scale, 3) for seg in raw_segments]
+
+    return [round(seg, 3) for seg in raw_segments]
 
 
 def decode_polyline(geometry: str) -> list[tuple[float, float]]:
@@ -22,7 +47,7 @@ def build_cumulative_distances(
     segment_distances_meters: list[float],
     target_total_distance_miles: float | None = None,
 ) -> list[float]:
-    """Build cumulative distances in miles from Mapbox segment distance annotations.
+    """Build cumulative distances in miles from segment distance annotations.
 
     Starting at 0.0, each segment distance (meters) is converted to miles and accumulated.
     If target_total_distance_miles is specified, the final point is pinned to it to avoid
@@ -45,7 +70,7 @@ def build_cumulative_distances(
 class RouteOdometer:
     """Odometer tracking cumulative distances along a route's polyline vertices.
 
-    Directly builds the cumulative distance array from Mapbox distance annotations
+    Directly builds the cumulative distance array from upstream distance annotations
     (in meters, converted to miles). Binary search provides O(log N) coordinate
     interpolation along segments with no geodesic calculation or scaling required.
     """
@@ -61,7 +86,7 @@ class RouteOdometer:
         segment_distances_meters: list[float] | None = None,
         total_distance_miles: float | None = None,
     ) -> 'RouteOdometer':
-        """Build a RouteOdometer from an encoded polyline and Mapbox distance annotations."""
+        """Build a RouteOdometer from an encoded polyline and upstream distance annotations."""
         points = decode_polyline(geometry)
 
         if not points:

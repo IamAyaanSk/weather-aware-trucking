@@ -28,8 +28,8 @@ from apps.api.services.analysis_cache import (
     get_cached_analysis,
     normalize_plan_request,
 )
-from apps.api.services.mapbox import fetch_mapbox_routes
 from apps.api.services.open_meteo import fetch_weather_for_routes
+from apps.api.services.routing import fetch_routes
 
 
 def _get_client_id(request: Request) -> str:
@@ -66,7 +66,7 @@ def plan_route(request: Request) -> Response:
 
     # Cache miss
 
-    routes_data = fetch_mapbox_routes(
+    routes_data = fetch_routes(
         origin=validated_data['origin'],
         destination=validated_data['destination'],
         departure_time=validated_data['departure_time'],

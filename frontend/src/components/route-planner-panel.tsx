@@ -205,8 +205,6 @@ export function RoutePlannerPanel({
               >
                 {routes?.map((route, index) => {
                   const isSelected = route.id === selectedRouteId;
-                  const hasNoTravel = route.metrics.no_travel_miles > 0;
-                  const hasSevere = route.metrics.severe_miles > 0;
 
                   return (
                     <AccordionItem

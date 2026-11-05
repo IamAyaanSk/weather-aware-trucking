@@ -463,6 +463,18 @@ Checkpoint weather and corridor heatmap must cover the full trip. If the longest
 
 ## 7. Integrations
 
+### 7.0 Routing Providers (TomTom & Mapbox)
+
+The backend routing service (`apps.api.services.routing.fetch_routes`) supports both **TomTom Routing API** (default when `TOMTOM_API_KEY` is set) and **Mapbox Directions API**.
+
+* **TomTom Routing API (`services/tomtom.py`)**:
+  * Dedicated `travelMode=truck` with commercial vehicle regulations (`vehicleCommercial=true`).
+  * Enforces physical clearances (`vehicleHeight`, `vehicleWidth`, `vehicleLength`) and weight ratings (`vehicleWeight`, `vehicleAxleWeight`, `vehicleNumberOfAxles`).
+  * Actively returns up to 3 distinct alternative corridors (`maxAlternatives=3`, `alternativeType=anyRoute`), solving Mapbox's limitation where only 2 routes were returned for most highway corridors.
+  * Point coordinates are encoded into polyline precision 5 and segment distances are extracted directly from TomTom's native road-network annotations via `extendedRouteRepresentation=distance` with strict upstream validation.
+* **Mapbox Directions API (`services/mapbox.py`)**:
+  * Retained as a reliable fallback provider when `ROUTING_PROVIDER=mapbox` or when `TOMTOM_API_KEY` is unset.
+
 ### 7.1 Mapbox Directions — truck limits + traffic
 
 ```text
