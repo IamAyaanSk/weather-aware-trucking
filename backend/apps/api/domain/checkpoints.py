@@ -6,10 +6,9 @@ from apps.api.domain.types import Checkpoint
 
 FLOATING_POINT_TOLERANCE = 1e-5
 
-def determine_sample_interval_miles(total_distance_miles: float) -> float:
-    """Determine the sampling interval in miles automatically based on route distance.
 
-    """
+def determine_sample_interval_miles(total_distance_miles: float) -> float:
+    """Determine the sampling interval in miles automatically based on route distance."""
     total = round(total_distance_miles, 2)
     if total <= 20.0:
         return round(total / 2.0, 2) if total > 0 else 0.0
@@ -24,15 +23,14 @@ def calculate_target_distances(
     total_distance_miles: float,
     sample_interval_miles: int | float | None = None,
 ) -> list[float]:
-    """Calculate sampling distances along the route at 0, interval, 2*interval, ..., destination.
-    """
+    """Calculate sampling distances along the route at 0, interval, 2*interval, ..., destination."""
     total = round(total_distance_miles, 2)
     if total <= 0:
         raise ValueError('Total route distance cannot be 0.')
 
     if sample_interval_miles is None:
         if total <= 20.0:
-            mid = round(total / 2.0, 2)                    
+            mid = round(total / 2.0, 2)
             return [0.0, mid, total]
 
         interval = determine_sample_interval_miles(total)
@@ -60,7 +58,7 @@ def _extract_coordinate(
     coord: tuple[float, float] | dict[str, float] | None,
 ) -> tuple[float, float] | None:
     """Normalize coordinate input to (lat, lng) tuple."""
-    
+
     if coord is None:
         return None
     if isinstance(coord, dict):

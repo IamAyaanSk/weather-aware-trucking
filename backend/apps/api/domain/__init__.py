@@ -1,2 +1,1 @@
-"""Domain layer for weather-aware truck routing.
-"""
+"""Domain layer for weather-aware truck routing."""
