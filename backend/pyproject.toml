@@ -28,3 +28,8 @@ select = ["E4", "E7", "E9", "F", "I"]
 [tool.ruff.format]
 # Keep Django's generated scaffold style consistent.
 quote-style = "single"
+
+[tool.pyrefly]
+python-interpreter-path = ".venv/bin/python"
+search-path = ["."]
+

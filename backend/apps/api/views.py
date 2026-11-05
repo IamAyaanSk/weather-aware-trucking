@@ -157,7 +157,7 @@ def plan_route(request: Request) -> Response:
         for r in ranked_routes
     ]
 
-    analysis_id = str(uuid.uuid4())
+    analysis_id: uuid.UUID = str(uuid.uuid4())
     created_at_dt = timezone.now()
     created_at_iso = created_at_dt.astimezone(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
     departure_time_iso = departure_time.astimezone(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -182,7 +182,7 @@ def plan_route(request: Request) -> Response:
         'warnings': warnings,
     }
 
-    # 6. Save to database for 1-hour reuse
+    # Save to database for 1-hour reuse
     RouteAnalysis.objects.create(
         id=analysis_id,
         client_id=client_id,
