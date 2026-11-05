@@ -98,7 +98,18 @@ frontend/src/
   - Strongly typed API helper functions:
     ```typescript
     export async function planRoute(payload: PlanRouteRequest): Promise<PlanRouteResponse> {
-      const { data } = await apiClient.post<PlanRouteResponse>("/routes/plan/", payload);
+      const { data } = await apiClient.get<PlanRouteResponse>("/routes/plan/", {
+        params: {
+          origin_lat: payload.origin.lat,
+          origin_lng: payload.origin.lng,
+          origin_name: payload.origin.name,
+          dest_lat: payload.destination.lat,
+          dest_lng: payload.destination.lng,
+          dest_name: payload.destination.name,
+          departure_time: payload.departure_time,
+          load_weight_lbs: payload.load_weight_lbs,
+        },
+      });
       return data;
     }
     ```
@@ -107,14 +118,14 @@ frontend/src/
 
 - Encapsulate all query keys using consistent query key factories:
   ```typescript
-  export const routeKeys = {
+  export const routePlanKeys = {
     all: ["routes"] as const,
-    plan: (id: string) => [...routeKeys.all, "plan", id] as const,
+    plan: (params: PlanRouteRequest | null) => ["routes", "plan", params] as const,
   };
   ```
 - Wrap API calls in dedicated, reusable hooks:
-  - `usePlanRouteMutation()` for calculating or re-evaluating routes.
-  - Return typed mutation states (`isPending`, `error`, `data`).
+  - `useRoutePlanQuery(params)` for querying and caching route plans.
+  - Return typed query states (`isFetching`, `isLoading`, `error`, `data`).
 - Handle errors gracefully with user-friendly error banners or toast notifications; do not crash UI trees.
 
 ---

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { RoutePlannerPanel } from "../components/route-planner-panel";
 import { RouteMap } from "../components/route-map";
-import { usePlanRouteMutation } from "../hooks/mutations/use-plan-route-mutation";
-import type { LocationCoordinate } from "../api/types";
+import { useRoutePlanQuery } from "../hooks/queries/use-route-plan-query";
+import type { LocationCoordinate, PlanRouteRequest } from "../api/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "cn";
 
@@ -11,8 +11,9 @@ export function PlanRoutePage(): React.JSX.Element {
   const [origin, setOrigin] = useState<LocationCoordinate | null>(null);
   const [destination, setDestination] = useState<LocationCoordinate | null>(null);
   const [pickingTarget, setPickingTarget] = useState<"origin" | "destination" | null>(null);
+  const [routeRequest, setRouteRequest] = useState<PlanRouteRequest | null>(null);
 
-  const planRouteMutation = usePlanRouteMutation();
+  const routePlanQuery = useRoutePlanQuery(routeRequest);
 
   const handleTogglePickOnMap = (target: "origin" | "destination") => {
     setPickingTarget((prev) => (prev === target ? null : target));
@@ -34,7 +35,7 @@ export function PlanRoutePage(): React.JSX.Element {
     departureTime: string;
   }) => {
     const departureIso = new Date(params.departureTime).toISOString();
-    planRouteMutation.mutate({
+    setRouteRequest({
       origin: params.origin,
       destination: params.destination,
       departure_time: departureIso,
@@ -70,7 +71,7 @@ export function PlanRoutePage(): React.JSX.Element {
           pickingTarget={pickingTarget}
           onTogglePickOnMap={handleTogglePickOnMap}
           onPlanRoute={handlePlanRoute}
-          isPending={planRouteMutation.isPending}
+          isPending={routePlanQuery.isFetching}
         />
 
         <button

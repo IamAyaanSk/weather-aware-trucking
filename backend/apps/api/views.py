@@ -21,7 +21,7 @@ from apps.api.domain.heatmap import build_corridor_heatmap
 from apps.api.domain.ranking import rank_routes
 from apps.api.domain.types import Checkpoint
 from apps.api.models import RouteAnalysis
-from apps.api.serializers import PlanRequestSerializer
+from apps.api.serializers import PlanRouteQuerySerializer
 from apps.api.services.analysis_cache import (
     build_reused_response,
     compute_request_hash,
@@ -46,13 +46,12 @@ def health(_request: Request) -> Response:
     return Response({'status': 'ok'})
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @authentication_classes([])
 @permission_classes([AllowAny])
 def plan_route(request: Request) -> Response:
     """Plan routes or return a cached analysis within 1 hour."""
-
-    serializer = PlanRequestSerializer(data=request.data)
+    serializer = PlanRouteQuerySerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
     validated_data = serializer.validated_data
 

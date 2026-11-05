@@ -12,20 +12,6 @@ COORDINATE_PRECISION_TOLERANCE = (
 # Route planning serializers
 
 
-class LocationSerializer(serializers.Serializer):
-    """Origin or destination coordinates and display name."""
-
-    name = serializers.CharField(max_length=255, trim_whitespace=True)
-    lat = serializers.FloatField(min_value=-90.0, max_value=90.0)
-    lng = serializers.FloatField(min_value=-180.0, max_value=180.0)
-
-    def validate_name(self, value: str) -> str:
-        trimmed = value.strip()
-        if not trimmed:
-            raise serializers.ValidationError('Location name cannot be empty.')
-        return trimmed
-
-
 class AwareDateTimeField(serializers.DateTimeField):
     """DateTime field that strictly requires an explicit timezone offset and normalizes to UTC."""
 
@@ -44,48 +30,68 @@ class AwareDateTimeField(serializers.DateTimeField):
         return dt.astimezone(UTC)
 
 
-class PlanRequestSerializer(serializers.Serializer):
-    """Validates the input payload for POST /api/v1/routes/plan/."""
+class PlanRouteQuerySerializer(serializers.Serializer):
+    """Validates and normalizes query parameters for GET /api/v1/routes/plan/."""
 
-    origin = LocationSerializer()
-    destination = LocationSerializer()
+    origin_lat = serializers.FloatField(min_value=-90.0, max_value=90.0)
+    origin_lng = serializers.FloatField(min_value=-180.0, max_value=180.0)
+    origin_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+    dest_lat = serializers.FloatField(min_value=-90.0, max_value=90.0)
+    dest_lng = serializers.FloatField(min_value=-180.0, max_value=180.0)
+    dest_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
     departure_time = AwareDateTimeField()
     load_weight_lbs = serializers.IntegerField(
         min_value=0,
         max_value=MAX_LOAD_WEIGHT_LBS,
+        default=0,
+        required=False,
     )
 
     def validate_departure_time(self, value: datetime) -> datetime:
         now_utc = datetime.now(UTC)
-
         if value < now_utc - timedelta(seconds=60):
             raise serializers.ValidationError('Departure time cannot be in the past.')
 
-        # Open-Meteo supports up to 16 days of hourly forecast so mange accordingly
         max_future = now_utc + timedelta(days=16)
         if value > max_future:
             raise serializers.ValidationError(
                 'Departure time cannot be beyond 16 days.'
             )
-
         return value
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
-        origin = attrs.get('origin')
-        destination = attrs.get('destination')
+        origin_lat = attrs['origin_lat']
+        origin_lng = attrs['origin_lng']
+        dest_lat = attrs['dest_lat']
+        dest_lng = attrs['dest_lng']
 
-        if origin and destination:
-            lat_diff = abs(origin['lat'] - destination['lat'])
-            lng_diff = abs(origin['lng'] - destination['lng'])
-            if (
-                lat_diff < COORDINATE_PRECISION_TOLERANCE
-                and lng_diff < COORDINATE_PRECISION_TOLERANCE
-            ):
-                raise serializers.ValidationError(
-                    'Origin and destination cannot be the same location (within 0.001°).'
-                )
+        if (
+            abs(origin_lat - dest_lat) < COORDINATE_PRECISION_TOLERANCE
+            and abs(origin_lng - dest_lng) < COORDINATE_PRECISION_TOLERANCE
+        ):
+            raise serializers.ValidationError(
+                'Origin and destination cannot be the same location (within 0.001°).'
+            )
 
-        return attrs
+        origin_name = attrs.get('origin_name') or f'{origin_lat},{origin_lng}'
+        dest_name = attrs.get('dest_name') or f'{dest_lat},{dest_lng}'
+
+        return {
+            'origin': {
+                'lat': origin_lat,
+                'lng': origin_lng,
+                'name': origin_name,
+            },
+            'destination': {
+                'lat': dest_lat,
+                'lng': dest_lng,
+                'name': dest_name,
+            },
+            'departure_time': attrs['departure_time'],
+            'load_weight_lbs': attrs.get('load_weight_lbs', 0),
+        }
 
 
 # Mapbox serializers

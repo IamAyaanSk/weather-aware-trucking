@@ -178,34 +178,24 @@ frontend/src/
 
 | Method | Path                   | Purpose                     |
 | ------ | ---------------------- | --------------------------- |
-| `POST` | `/api/v1/routes/plan/` | Create or reuse an analysis |
+| `GET`  | `/api/v1/routes/plan/` | Create or reuse an analysis |
 | `GET`  | `/api/v1/health/`      | Hosting health check        |
 
-No authentication. Cache reuse is scoped by an anonymous `X-Client-Id` header (UUID generated in `localStorage`). If the header is absent, use `"anonymous"`. Add DRF anonymous throttling. `X-Client-Id` only scopes 1-hour cache reuse; it is **not** authentication or a security boundary. Set `authentication_classes = []` and `permission_classes = [AllowAny]` on these public views so DRF session auth does not impose CSRF on the cross-origin POST; keep CSRF for `/admin/`.
+No authentication. Cache reuse is scoped by an anonymous `X-Client-Id` header (UUID generated in `localStorage`). If the header is absent, use `"anonymous"`. Add DRF anonymous throttling. `X-Client-Id` only scopes 1-hour cache reuse; it is **not** authentication or a security boundary. Set `authentication_classes = []` and `permission_classes = [AllowAny]` on these public views.
 
-### Request
+### Request (GET Query Parameters)
 
-```json
-{
-  "origin": {
-    "name": "Chicago, IL",
-    "lat": 41.8781,
-    "lng": -87.6298
-  },
-  "destination": {
-    "name": "Denver, CO",
-    "lat": 39.7392,
-    "lng": -104.9903
-  },
-  "departure_time": "2026-11-04T14:00:00Z",
-  "load_weight_lbs": 35000
-}
+```text
+GET /api/v1/routes/plan/?origin_lat=41.8781&origin_lng=-87.6298&origin_name=Chicago,%20IL&dest_lat=39.7392&dest_lng=-104.9903&dest_name=Denver,%20CO&departure_time=2026-11-04T14:00:00Z&load_weight_lbs=35000
 ```
 
-- `departure_time`: ISO 8601 with offset. Normalize to UTC internally.
+- `origin_lat`, `origin_lng`: float, -90..90 and -180..180 (required).
+- `origin_name`: optional string for display (defaults to `f"{origin_lat},{origin_lng}"`).
+- `dest_lat`, `dest_lng`: float, -90..90 and -180..180 (required).
+- `dest_name`: optional string for display (defaults to `f"{dest_lat},{dest_lng}"`).
+- `departure_time`: ISO 8601 with offset (required). Normalize to UTC internally.
+- `load_weight_lbs`: integer, `>= 0` (optional, default 0).
 - `sampling_interval`: automatically determined by backend based on route distance (`<=20` mi -> dist/2, `20–100` mi -> 10 mi, `100–200` mi -> 25 mi, `>200` mi -> 50 mi); not passed by user.
-- `load_weight_lbs`: integer, `>= 0`; sanity upper bound documented in serializer.
-- `origin`/`destination`: objects containing `name` (string for display and history), `lat` (float, -90..90), and `lng` (float, -180..180). Passed directly to Mapbox Directions (`/driving-traffic/{origin.lng},{origin.lat};{dest.lng},{dest.lat}`). No server-side geocoding required in the routing flow.
 - Reject origin == destination (within 0.001°), naive datetimes, past departures, and departures beyond Open-Meteo's 16-day forecast range.
 
 ### Response
