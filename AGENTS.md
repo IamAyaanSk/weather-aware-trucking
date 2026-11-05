@@ -262,6 +262,7 @@ No authentication. History is scoped by an anonymous `X-Client-Id` header (UUID 
           "eta_iso": "2026-11-04T14:00:00Z",
           "arrival_hour_offset": 0,
           "arrival_weather": {
+            "temperature_f": 45.2,
             "wind_mph": 18.2,
             "rain_in_hr": 0.02,
             "snow_in_hr": 0.0,
@@ -567,7 +568,8 @@ Limits: 25 waypoints, 10,000 km total, ~300 requests/minute. `GET` URLs are capp
 GET https://api.open-meteo.com/v1/forecast
   ?latitude=<comma-separated>
   &longitude=<comma-separated>
-  &hourly=wind_speed_10m,rain,snowfall
+  &hourly=temperature_2m,wind_speed_10m,rain,snowfall
+  &temperature_unit=fahrenheit
   &wind_speed_unit=mph
   &precipitation_unit=inch
   &timezone=GMT

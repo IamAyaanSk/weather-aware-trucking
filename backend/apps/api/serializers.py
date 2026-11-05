@@ -202,3 +202,28 @@ class MapboxDirectionsResponseSerializer(serializers.Serializer):
     waypoints = serializers.ListField(
         child=MapboxWaypointSerializer(), required=False, default=list
     )
+
+
+# Open-Meteo serializers
+class OpenMeteoHourlyDataSerializer(serializers.Serializer):
+    """Serializer for hourly weather metric arrays."""
+
+    time = serializers.ListField(child=serializers.CharField())
+    temperature_2m = serializers.ListField(
+        child=serializers.FloatField(allow_null=True),
+        required=False,
+        default=list,
+    )
+    wind_speed_10m = serializers.ListField(
+        child=serializers.FloatField(allow_null=True)
+    )
+    rain = serializers.ListField(child=serializers.FloatField(allow_null=True))
+    snowfall = serializers.ListField(child=serializers.FloatField(allow_null=True))
+
+
+class OpenMeteoLocationForecastSerializer(serializers.Serializer):
+    """Serializer for a single location forecast from Open-Meteo."""
+
+    latitude = serializers.FloatField()
+    longitude = serializers.FloatField()
+    hourly = OpenMeteoHourlyDataSerializer()

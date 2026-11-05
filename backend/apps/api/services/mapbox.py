@@ -68,10 +68,7 @@ def fetch_mapbox_routes(
     departure_time: datetime,
     load_weight_lbs: int,
 ) -> MapboxRoutesResult:
-    """Fetch driving-traffic routes from Mapbox Directions API with truck limits.
-
-    Conforms to AGENTS.md §7.1 and §6.3.
-    """
+    """Fetch driving-traffic routes from Mapbox Directions API with truck limits."""
     access_token = getattr(settings, 'MAPBOX_ACCESS_TOKEN', '').strip()
     if not access_token:
         logger.error('MAPBOX_ACCESS_TOKEN is not configured.')

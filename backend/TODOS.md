@@ -142,8 +142,13 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
       calculations and scaling. Binary-search segment interpolation for coordinates rounded to 5
       decimals per §6.9.
 
-- [ ] **M1.3** `domain/risk.py`: wind/rain/snow thresholds (`AGENTS.md` §6.2) with inclusive
+- [x] **M1.3** `domain/risk.py`: wind/rain/snow thresholds (`AGENTS.md` §6.2) with inclusive
       boundaries, load overrides, `max()` combination, and deterministic `rule_triggered` ties.
+
+      **Context (2026-11-05):** Pure Python domain module `domain/risk.py` implementing `grade_wind`,
+      `grade_rain`, `grade_snow`, and `calculate_checkpoint_risk`. Strictly adheres to §6.2 boundaries
+      (including wind load overrides at >30k and >40k lbs) and resolves rule ties in exact order:
+      `WIND_LOAD`, `WIND`, `RAIN`, `SNOW`. Returns null `rule_triggered` on `LOW` risk.
 - [x] **M1.4** `domain/checkpoints.py`: automatic distance-based sampling (<=20 mi -> dist/2,
       20-100 mi -> 10 mi, 100-200 mi -> 25 mi, >200 mi -> 50 mi), no duplicate destination, half-up
       hour offsets, segment miles summing to route distance.
@@ -186,12 +191,25 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
 
 ## M3 — Open-Meteo
 
-- [ ] **M3.1** `services/open_meteo.py`: comma-separated coordinates, `timezone=GMT`, inclusive
+- [x] **M3.1** `services/open_meteo.py`: comma-separated coordinates, `timezone=GMT`, inclusive
       `start_hour`/`end_hour`, configurable batch size and concurrency.
-- [ ] **M3.2** Validate timestamps by value (do not assume row 0 is departure) and normalize units
+
+      **Context (2026-11-05):** Implemented `fetch_weather_for_route_checkpoints` and `fetch_weather_for_routes`.
+      Batches all checkpoints for each route into 1 request (3 routes = 3 requests). Executes concurrently
+      with bounded `ThreadPoolExecutor`.
+
+- [x] **M3.2** Validate timestamps by value (do not assume row 0 is departure) and normalize units
       from `hourly_units` to mph and in/hr.
-- [ ] **M3.3** Fail closed on null/non-finite required values (`502 weather_unavailable`) or missing
+
+      **Context (2026-11-05):** Normalizes units dynamically (`normalize_wind_speed`, `normalize_rain`,
+      `normalize_snowfall`). Builds time-to-index lookup and matches `eta_hour_str` by value against
+      forecast `time` array.
+
+- [x] **M3.3** Fail closed on null/non-finite required values (`502 weather_unavailable`) or missing
       samples (`502 weather_incomplete`).
+
+      **Context (2026-11-05):** Strict checks on `math.isnan`, `math.isinf`, and missing ETA hours;
+      raises `UpstreamServiceError` failing closed. Type-checks with DRF serializers and TypedDicts.
 - [ ] **M3.4** Extend checkpoint weather past 48 h for long trips; add
       `forecast_extended_for_checkpoints`; 422 beyond Open-Meteo's 16-day range.
 - [ ] **M3.5** Mocked tests for multi-location responses, unit variants, missing hours, short

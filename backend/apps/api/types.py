@@ -72,3 +72,18 @@ class MapboxRoutesResult(TypedDict):
     snapped_origin: SnappedCoordinate
     snapped_destination: SnappedCoordinate
     warnings: list[RouteWarning]
+
+
+# Open-Meteo types
+class OpenMeteoHourlyData(TypedDict):
+    time: list[str]
+    temperature_2m: NotRequired[list[float | None]]
+    wind_speed_10m: list[float | None]
+    rain: list[float | None]
+    snowfall: list[float | None]
+
+
+class OpenMeteoLocationForecastData(TypedDict):
+    latitude: float
+    longitude: float
+    hourly: OpenMeteoHourlyData

@@ -35,10 +35,12 @@ class CheckpointWeather:
     snow_in_hr: float
     risk_level: RiskLevel
     risk_score: int
+    temperature_f: float = 0.0
     rule_triggered: RiskRule | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            'temperature_f': self.temperature_f,
             'wind_mph': self.wind_mph,
             'rain_in_hr': self.rain_in_hr,
             'snow_in_hr': self.snow_in_hr,
