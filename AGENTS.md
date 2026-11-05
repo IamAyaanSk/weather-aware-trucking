@@ -24,9 +24,8 @@ The user enters origin, destination, departure time, and load weight (lbs). The 
 3. Gets hourly weather for every checkpoint from Open-Meteo.
 4. Scores each checkpoint with the given wind/rain/snow/load rules.
 5. Aggregates route risk, recommends a safe route, and displays all routes.
-6. Shows a 0–48 hour corridor heatmap, forecast slider, and moving truck marker.
-7. Stores each analysis so it can be revisited from a history list.
-8. Reuses an analysis for the same request made within the last hour.
+6. Shows a 0–48+ hour corridor heatmap, forecast slider, and moving truck marker.
+7. Reuses an analysis for the same request made within the last hour.
 
 ### Deliverables
 
@@ -59,22 +58,21 @@ Correctness and clarity over extra features.
 
 ### Backend
 
-- Django **6.1.3**, DRF **3.18.3**, `django-cors-headers`, `python-dotenv` installed. `httpx`, `geopy`, and `polyline` are not installed yet (M2/M3).
-- Python **3.15**, uv, Ruff, SQLite. `pytest`/`pytest-django` are not installed yet; tests are deferred.
-- M0 complete: `apps/__init__.py` exists, `ApiConfig.name = "apps.api"`, DRF + CORS + `apps.api` are registered, settings are env-driven, and `/api/v1/health/` is served.
+- Django **6.1.3**, DRF **3.18.3**, `django-cors-headers`, `python-dotenv`, `httpx`, `polyline` installed.
+- Python **3.15**, uv, Ruff, SQLite. Automated tests and deployment are pending for future passes.
+- Scaffold complete: `apps/__init__.py` exists, `ApiConfig.name = "apps.api"`, DRF + CORS + `apps.api` are registered, settings are env-driven, and `/api/v1/health/` is served.
 - `config/urls.py` mounts `apps.api.urls` at `/api/v1/`; `/admin/` keeps CSRF.
-- The public health view uses `authentication_classes = []` and `AllowAny`; anonymous throttling defaults to `120/min`; CORS allows the `x-client-id` header.
-- `RouteAnalysis` and its initial migration are implemented. No serializers, services, domain layer, or plan/history endpoints yet; `views.py` only serves health.
-- `apps/api/tests/` exists but is empty. No tests are checked in; testing is deferred until a dedicated pass.
+- The public views use `authentication_classes = []` and `AllowAny`; anonymous throttling defaults to `120/min`; CORS allows the `x-client-id` header.
+- Complete domain layer implemented: `types.py`, `geo.py`, `risk.py`, `checkpoints.py`, `aggregation.py`, `ranking.py`, `heatmap.py`.
+- Complete services layer implemented: `mapbox.py` (Directions API with truck parameters), `open_meteo.py` (batch weather requests), `http.py` (retries/backoff), `analysis_cache.py` (1-hour cache hit/miss).
+- Endpoints: `GET /api/v1/health/` and `POST /api/v1/routes/plan/` (all data delivered via plan endpoint, returning cached analyses on cache hits).
 
 ### Frontend
 
 - Vite **8.3.5**, React **19.3.1**, TypeScript **~7.0.2**, React Compiler.
 - pnpm **11.18.0**; oxlint/oxfmt.
 - `src/App.tsx` is a placeholder (`<h1>Hello</h1>`).
-- No Leaflet, heatmap, polyline, form, data-fetching, or test dependencies.
-
-**Everything below is the target design except the implemented M0 scaffold and the `RouteAnalysis` model/migration. Current milestone: M1.**
+- Leaflet and UI integration pending (M5–M7).
 
 ---
 
@@ -85,14 +83,12 @@ React + Vite + Leaflet
   │  1. Search location (press Enter) -> get recommendations (Mapbox Search Box API via public token)
   │  2. Select recommendation -> retrieve coords (Mapbox Search Box API via public token)
   │  3. POST /api/v1/routes/plan/ (with origin & destination coordinates)
-  │  4. GET  /api/v1/analyses/
-  │  5. GET  /api/v1/analyses/{id}/
   ▼
 Django + DRF
-  ├── thin view + serializer (validates coordinates, weight, departure, interval)
-  ├── services/: Mapbox Directions, Open-Meteo
-  ├── domain/: geo, risk, checkpoint, ranking, heatmap
-  └── SQLite/Postgres: RouteAnalysis history + 1h reuse
+  ├── thin view + serializer (validates coordinates, weight, departure)
+  ├── services/: Mapbox Directions, Open-Meteo, Analysis Cache
+  ├── domain/: geo, risk, checkpoint, aggregation, ranking, heatmap
+  └── SQLite/Postgres: RouteAnalysis 1h cache reuse
          │
          ├──► Mapbox Directions API (driving-traffic + vehicle limits using coordinates)
          └──► Open-Meteo API
@@ -100,7 +96,8 @@ Django + DRF
 
 ### Rules
 
-- The calculation is request-scoped; the only persistence is the `RouteAnalysis` record.
+- The calculation is request-scoped; persistence in `RouteAnalysis` is used for 1-hour cache reuse.
+- All routing and weather analyses are delivered via `POST /api/v1/routes/plan/`. Cache hits within 1 hour return stored analyses immediately with `reused: true`.
 - Location search is handled directly in frontend using a public Mapbox token (`VITE_MAPBOX_PUBLIC_TOKEN`), resolving coordinates before calling the backend.
 - Coordinates are passed directly to `POST /api/v1/routes/plan/`. Backend does not run geocoding inside the routing pipeline; it sends coordinates straight to Mapbox Directions.
 - Secret keys stay server-side: the backend `MAPBOX_ACCESS_TOKEN` is used exclusively for Directions and is never exposed to Vite.
@@ -122,7 +119,7 @@ backend/
 │   └── api/
 │       ├── apps.py                  # name = "apps.api"
 │       ├── urls.py
-│       ├── views.py                 # plan + history endpoints
+│       ├── views.py                 # plan + health endpoints
 │       ├── serializers.py
 │       ├── models.py                # RouteAnalysis
 │       ├── exceptions.py
@@ -132,11 +129,12 @@ backend/
 │       │   ├── risk.py
 │       │   ├── checkpoints.py
 │       │   ├── aggregation.py
-│       │   ├── heatmap.py
-│       │   └── planner.py
+│       │   ├── ranking.py
+│       │   └── heatmap.py
 │       ├── services/
 │       │   ├── mapbox.py            # Directions API
-│       │   ├── open_meteo.py
+│       │   ├── open_meteo.py        # batch weather API
+│       │   ├── analysis_cache.py    # 1h hash cache
 │       │   └── http.py
 │       ├── migrations/
 │       └── tests/
@@ -178,14 +176,12 @@ frontend/src/
 
 ### Endpoints
 
-| Method | Path                     | Purpose                           |
-| ------ | ------------------------ | --------------------------------- |
-| `POST` | `/api/v1/routes/plan/`   | Create or reuse an analysis       |
-| `GET`  | `/api/v1/analyses/`      | List this client's saved analyses |
-| `GET`  | `/api/v1/analyses/{id}/` | Full stored analysis              |
-| `GET`  | `/api/v1/health/`        | Hosting health check              |
+| Method | Path                   | Purpose                     |
+| ------ | ---------------------- | --------------------------- |
+| `POST` | `/api/v1/routes/plan/` | Create or reuse an analysis |
+| `GET`  | `/api/v1/health/`      | Hosting health check        |
 
-No authentication. History is scoped by an anonymous `X-Client-Id` header (UUID generated in `localStorage`). If the header is absent, use `"anonymous"`. Add DRF anonymous throttling. `X-Client-Id` only scopes history; it is **not** authentication or a security boundary. Set `authentication_classes = []` and `permission_classes = [AllowAny]` on these public views so DRF session auth does not impose CSRF on the cross-origin POST; keep CSRF for `/admin/`.
+No authentication. Cache reuse is scoped by an anonymous `X-Client-Id` header (UUID generated in `localStorage`). If the header is absent, use `"anonymous"`. Add DRF anonymous throttling. `X-Client-Id` only scopes 1-hour cache reuse; it is **not** authentication or a security boundary. Set `authentication_classes = []` and `permission_classes = [AllowAny]` on these public views so DRF session auth does not impose CSRF on the cross-origin POST; keep CSRF for `/admin/`.
 
 ### Request
 
@@ -289,14 +285,15 @@ No authentication. History is scoped by an anonymous `X-Client-Id` header (UUID 
 
 Contract notes:
 
-- `analysis_id`, `created_at`, `reused`, and `warnings` are small additions needed for history and UI state.
+- `analysis_id`, `created_at`, `reused`, and `warnings` support cache reuse, inspection, and UI feedback.
 - `recommended_route_id` is **null** when every route has any No Travel miles. All `is_recommended` are then false, but every route is still returned and displayed.
 - `routes` is ordered best-first by the ranking in §6.7.
 - `risk_level` is uppercase: `LOW`, `MODERATE`, `HIGH`, `SEVERE`, `NO_TRAVEL`.
 - `rule_triggered` is `null` for Low, otherwise one of `WIND`, `RAIN`, `SNOW`, `WIND_LOAD`. Ties resolve in order: `WIND_LOAD`, `WIND`, `RAIN`, `SNOW`.
+- `arrival_weather` includes `temperature_f`. If weather data for a checkpoint is unavailable or corrupted, it is gracefully skipped (`arrival_weather: null`).
 - `metrics.avg_risk_score` is the distance-weighted average risk in `0..4`.
-- `arrival_hour_offset` is a non-negative integer. It may exceed 48 for long trips; the heatmap remains `0..48`.
-- `corridor_heatmap.hourly_intensity` has keys `"0"` through `"48"`; each array aligns by index with `points`.
+- `arrival_hour_offset` is a non-negative integer. It may exceed 48 for long trips.
+- `corridor_heatmap.hourly_intensity` has string keys `"0"` through `str(forecast_hours)` where `forecast_hours = max(48, longest arrival_hour_offset)`; each array aligns by index with `points`.
 - `overview_polyline` is Mapbox's encoded polyline from `routes[].geometry`, requested with
   `geometries=polyline` (precision 5, same encoding Google used). Frontend decodes with
   `@mapbox/polyline`; backend decodes with Python `polyline`.
@@ -305,30 +302,6 @@ Contract notes:
 - `warnings` entries use `{ "code": "...", "message": "..." }`, e.g. `fewer_than_three_routes`,
   `no_safe_route`, `truck_restrictions_unsupported`, `departure_time_approximated`,
   `forecast_extended_for_checkpoints`.
-
-### History list response
-
-```json
-{
-  "analyses": [
-    {
-      "analysis_id": "b0f5c9d4-...",
-      "created_at": "2026-11-04T13:42:11Z",
-      "origin": "Chicago, IL",
-      "destination": "Denver, CO",
-      "departure_time": "2026-11-04T14:00:00Z",
-      "load_weight_lbs": 35000,
-      "sample_interval_miles": 25,
-      "recommended_route_id": "route_1",
-      "recommended_route_name": "I-80 W, I-76 E",
-      "total_distance_miles": 1004.2,
-      "total_duration_hours": 15.6
-    }
-  ]
-}
-```
-
-Newest first, limit 50. `GET /api/v1/analyses/{id}/` returns the full stored response and is scoped to the same `X-Client-Id`.
 
 ### Errors
 
@@ -487,14 +460,14 @@ Interpolate along checkpoints at that distance. The truck stops at the destinati
 
 - Deduplicate checkpoint coordinates across all routes, rounded to 5 decimals.
 - `corridor_heatmap.points` is the unique coordinate list.
-- For each point and each offset `0..48`, compute the load-aware risk score and `intensity = score / 4.0`.
-- `hourly_intensity["h"]` is an array aligned with `points`.
+- For each point and each offset `0..forecast_hours` (where `forecast_hours = max(48, longest arrival_hour_offset)`), compute the load-aware risk score and `intensity = score / 4.0`.
+- `hourly_intensity["h"]` has keys `"0"` through `str(forecast_hours)`, each array aligned with `points`.
 - The heatmap is anchored to departure time, not each route's ETA.
 - Slider frames use `Math.round(t)` for O(1) lookup. Marker risk uses the nearest integer hour. Truck position uses continuous `t`.
 
 ### 6.10 Long trips
 
-Checkpoint weather must cover the full trip. If the longest route exceeds 48 hours, fetch weather beyond 48 hours up to Open-Meteo's 16-day limit and set `arrival_hour_offset` beyond 48 as needed. The heatmap and slider remain `0..48`. Add `forecast_extended_for_checkpoints` when this happens. If the trip exceeds 16 days from now, return 422.
+Checkpoint weather and corridor heatmap must cover the full trip. If the longest route exceeds 48 hours, fetch weather beyond 48 hours up to Open-Meteo's 16-day limit, set `arrival_hour_offset` beyond 48 as needed, and extend the corridor heatmap to `forecast_hours = max(48, longest arrival_hour_offset)`. Add `forecast_extended_for_checkpoints` when this happens. If the trip exceeds 16 days from now, return 422.
 
 ---
 

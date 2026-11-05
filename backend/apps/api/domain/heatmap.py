@@ -43,12 +43,12 @@ def build_corridor_heatmap(
                 unique_coords.append(coord)
 
     points: list[list[float]] = [[lat, lng] for lat, lng in unique_coords]
-    
+
     target_hour_strs = [
         (dep_utc + timedelta(hours=h)).strftime('%Y-%m-%dT%H:00')
         for h in range(forecast_hours + 1)
     ]
-    
+
     hourly_intensity: dict[str, list[float]] = {
         str(h): [0.0] * len(unique_coords) for h in range(forecast_hours + 1)
     }

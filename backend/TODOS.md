@@ -25,13 +25,13 @@ Status legend: `[ ]` pending · `[x]` done · `[~]` partially done / blocked · 
 
 | Milestone | State | Notes |
 |---|---|---|
-| M0 — Wire scaffold | `[x]` | Core scaffold complete. Tests are deferred by project direction. |
-| M1 — Domain + tests | `[ ]` | Not started. Domain code only; tests are deferred. |
-| M2 — Mapbox | `[ ]` | Not started. Geocoding + Directions. Blocked by token scope confirmation. |
-| M3 — Open-Meteo | `[ ]` | Not started. |
-| M4 — Persistence + API | `[~]` | `RouteAnalysis` model + migration done. Tests and API work remain. |
+| M0 — Wire scaffold | `[x]` | Core scaffold complete. Tests deferred. |
+| M1 — Domain | `[x]` | Domain modules complete (`geo`, `risk`, `checkpoints`, `aggregation`, `ranking`, `heatmap`). Tests pending for future. |
+| M2 — Mapbox | `[x]` | Driving-traffic, truck parameters, annotations odometer complete. Tests pending for future. |
+| M3 — Open-Meteo | `[x]` | Batch requests, concurrency, dynamic time alignment complete. Tests pending for future. |
+| M4 — Persistence + API | `[x]` | `RouteAnalysis` model, 1-hour cache reuse, `POST /plan/` endpoint complete. Tests pending for future. |
 | M8 — Backend polish | `[ ]` | README, env example, structured logs. |
-| M9 — Backend deploy | `[ ]` | Hosting, CORS, smoke test. |
+| M9 — Backend deploy | `[ ]` | Pending for future deployment pass. |
 
 Frontend milestones (M5–M8 UI) are tracked in `AGENTS.md`; this file only covers backend work.
 
@@ -185,29 +185,44 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
       forecast limit so all corridor points have full coverage for trips > 48 hours. Attached to
       `plan_route` view response.
 - [ ] **M1.8** Boundary tests for every risk threshold (just below / at / just above), load
-      overrides at exactly 30,000 and 40,000 lb, and every `rule_triggered` tie.
+      overrides at exactly 30,000 and 40,000 lb, and every `rule_triggered` tie. **Pending (future testing pass).**
 - [ ] **M1.9** Checkpoint tests for intervals 10/25/50, exact multiples, one-checkpoint routes, and
-      segment sums.
-- [ ] **M1.10** Ranking tests for each tie-break field and for all-No-Travel routes.
+      segment sums. **Pending (future testing pass).**
+- [ ] **M1.10** Ranking tests for each tie-break field and for all-No-Travel routes. **Pending (future testing pass).**
 
 ## M2 — Mapbox Directions
 
-- [ ] **M2.0** Confirm the Mapbox token has Directions scope and is not URL-restricted for server use.
-- [ ] **M2.1** `services/http.py`: `httpx` client with timeouts, bounded retry on 429/5xx/timeouts,
+- [x] **M2.0** Confirm the Mapbox token has Directions scope and is not URL-restricted for server use.
+
+- [x] **M2.1** `services/http.py`: `httpx` client with timeouts, bounded retry on 429/5xx/timeouts,
       no retry on 401/403.
-- [ ] **M2.2** `services/mapbox.py`: `mapbox/driving-traffic` Directions request accepting direct
+
+      **Context (2026-11-05):** Implemented `request_with_retry` with exponential backoff on retryable
+      errors (429, 5xx, timeouts) and immediate failure on 401/403.
+
+- [x] **M2.2** `services/mapbox.py`: `mapbox/driving-traffic` Directions request accepting direct
       coordinates with `alternatives=true`, `geometries=polyline`, `overview=full`, `steps=false`,
       `depart_at`, and explicit `max_height`/`max_width`/`max_weight` in metric units.
-- [ ] **M2.3** Fail fast on a missing/invalid token; `MAPBOX_TRUCK_RESTRICTIONS_ENABLED=false` is an
+
+      **Context (2026-11-05):** Implemented `fetch_mapbox_routes` with `calculate_truck_dimensions`
+      converting imperial dimensions to metric meters and tons.
+
+- [x] **M2.3** Fail fast on a missing/invalid token; `MAPBOX_TRUCK_RESTRICTIONS_ENABLED=false` is an
       explicit, logged escape hatch that still emits `truck_restrictions_unsupported`.
-- [ ] **M2.4** Parse 1–3 routes: `distance`, `duration` (+`duration_typical` fallback), `geometry`,
+
+- [x] **M2.4** Parse 1–3 routes: `distance`, `duration` (+`duration_typical` fallback), `geometry`,
       `legs[0].summary` as the route name, and snapped `waypoints[]` for the first/last checkpoint.
-- [ ] **M2.5** Treat `NoRoute`/`NoSegment` as 422 even though Mapbox returns HTTP 200; map `401/403`,
+
+      **Context (2026-11-05):** Parses routes and validates via `MapboxDirectionsResponseSerializer`
+      with waypoint coordinate extraction.
+
+- [x] **M2.5** Treat `NoRoute`/`NoSegment` as 422 even though Mapbox returns HTTP 200; map `401/403`,
       `InvalidInput`, 429, and 5xx to safe errors without leaking the token or response body.
+
 - [ ] **M2.6** Mocked tests for 1/2/3 routes, `NoRoute` with HTTP 200, retry bounds, and
-      truck parameter conversion. No live network calls in unit tests.
+      truck parameter conversion. No live network calls in unit tests. **Pending (future testing pass).**
 - [ ] **M2.7** Mocked tests for 1/2/3 routes, `NoRoute` with HTTP 200, geocode miss, retry bounds, and
-      the distance/duration guards.
+      the distance/duration guards. **Pending (future testing pass).**
 
 ## M3 — Open-Meteo
 
@@ -233,7 +248,7 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
 - [ ] **M3.4** Extend checkpoint weather past 48 h for long trips; add
       `forecast_extended_for_checkpoints`; 422 beyond Open-Meteo's 16-day range.
 - [ ] **M3.5** Mocked tests for multi-location responses, unit variants, missing hours, short
-      arrays, batching concurrency, and long trips.
+      arrays, batching concurrency, and long trips. **Pending (future testing pass).**
 
 ## M4 — Persistence + API
 
@@ -266,12 +281,8 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
       `ruff check .` and `ruff format --check .` pass. `manage.py` and `config/urls.py` changed only
       because of that one-time formatting.
 
-- [~] **M4.3** Add model tests (UUID PK, nullable recommendation, ordering, JSON round-trip, index
-      shape) in `apps/api/tests/test_models.py`. **Deferred by user direction.**
-
-      **Context (2026-11-04):** Tests were drafted and removed at the user's request; no tests are
-      checked in. The `apps/api/tests/` package remains empty for the later testing pass. Do not
-      recreate these tests until that pass begins.
+- [ ] **M4.3** Add model tests (UUID PK, nullable recommendation, ordering, JSON round-trip, index
+      shape) in `apps/api/tests/test_models.py`. **Pending (future testing pass).**
 
 - [x] **M4.4** Add `services/analysis_cache.py` (or equivalent): canonical normalization,
       `sha256` hash including `PLAN_CACHE_VERSION` and truck profile version, 1-hour lookup scoped
@@ -283,19 +294,27 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
 - [x] **M4.5** Add request/response serializers matching §5 exactly; validate UTC ISO timestamps,
       past departures, 16-day limit, origin != destination, interval whitelist, load bounds.
 
-- [x] **M4.6** Add `POST /api/v1/routes/plan/` (thin view; delegate to planner), `GET
-      /api/v1/analyses/` (newest first, limit 50), `GET /api/v1/analyses/{id}/` (client-scoped).
+- [x] **M4.6** Add `POST /api/v1/routes/plan/` delivering full routing, weather, risk, ranking,
+      and corridor heatmap analysis with 1-hour cache reuse.
 
-      **Context (2026-11-05):** Added complete endpoint handlers for `plan_route`, `list_analyses`,
-      and `get_analysis` matching §5 contract, history retrieval, and 1-hour reuse. Mounted at
-      `/api/v1/routes/plan/`, `/api/v1/analyses/`, and `/api/v1/analyses/<uuid:analysis_id>/`.
-- [ ] **M4.7** Add the §5 error envelope and status mapping; never leak keys, raw bodies, or stack
+      **Context (2026-11-05):** Added complete endpoint handler for `plan_route` matching §5 contract
+      and 1-hour reuse. Mounted at `/api/v1/routes/plan/`. (History `GET` endpoints removed per user direction).
+
+- [x] **M4.7** Add the §5 error envelope and status mapping; never leak keys, raw bodies, or stack
       traces. Failed computation must not create a row.
-- [ ] **M4.8** Set `authentication_classes = []`, `AllowAny` on public views; keep CSRF for admin;
+
+      **Context (2026-11-05):** Custom exception handler in `apps/api/exceptions.py` normalizes all errors
+      to `{"error": {"code": "...", "message": "..."}}` with HTTP status codes matching §5.
+
+- [x] **M4.8** Set `authentication_classes = []`, `AllowAny` on public views; keep CSRF for admin;
       apply anonymous throttling.
+
+      **Context (2026-11-05):** Public views use `AllowAny`, `authentication_classes = []`, and default
+      anonymous throttling (`120/min`).
+
 - [ ] **M4.9** Tests: reuse within 1 h, new row after 1 h, client scoping, failed computation not
-      saved, history ordering/limit, 404 for another client's analysis, validation matrix, 1/2/3
-      routes, upstream error mapping.
+      saved, validation matrix, 1/2/3 routes, upstream error mapping. **Pending (future testing pass).**
+
 - [ ] **M4.10** Review whether `client_id` needs the individual `db_index` now that
       `(client_id, ...)` composite indexes exist; keep only if it earns its write cost.
 
@@ -307,12 +326,12 @@ old Google LVR provisioning question and is now blocked on Mapbox token scope co
 - [ ] **M8.4** Verify `ruff check .` and `ruff format --check .` are clean.
 - [ ] **M8.5** Confirm no Mapbox access token is referenced from frontend or committed files.
 
-## M9 — Backend deploy
+## M9 — Backend deploy (Pending for future deployment pass)
 
-- [ ] **M9.1** Choose hosting and database; confirm Python 3.15 support (§14.5).
-- [ ] **M9.2** Add `gunicorn`, production settings, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`.
-- [ ] **M9.3** Run migrations on the host and smoke-test `/api/v1/health/`, `/plan/`, history.
-- [ ] **M9.4** Verify secrets are set through the host, not committed.
+- [ ] **M9.1** Choose hosting and database; confirm Python 3.15 support (§14.5). **Pending (future deploy pass).**
+- [ ] **M9.2** Add `gunicorn`, production settings, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`. **Pending (future deploy pass).**
+- [ ] **M9.3** Run migrations on the host and smoke-test `/api/v1/health/` and `/plan/`. **Pending (future deploy pass).**
+- [ ] **M9.4** Verify secrets are set through the host, not committed. **Pending (future deploy pass).**
 
 ## Blockers and open questions
 

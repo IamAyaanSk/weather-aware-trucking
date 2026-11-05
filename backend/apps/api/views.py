@@ -107,7 +107,7 @@ def plan_route(request: Request) -> Response:
 
     # Rank routes and assign recommendation flag
     ranked_routes, recommended_route_id, no_safe_route = rank_routes(routes)
-    
+
     warnings = list(routes_data.get('warnings', []))
     if no_safe_route:
         warnings.append(
