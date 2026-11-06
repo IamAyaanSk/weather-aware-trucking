@@ -417,7 +417,7 @@ severe_miles    = sum(segment_miles where risk == 3)
 high_miles      = sum(segment_miles where risk == 2)
 moderate_miles  = sum(segment_miles where risk == 1)
 low_miles       = sum(segment_miles where risk == 0)
-avg_risk_score  = sum(risk * segment_miles) / total_distance_miles
+avg_risk_score  = sum(risk * segment_miles) / sum(segment_miles where risk > 0) if any else 0.0 (excludes low-risk miles to prevent denominator dilution)
 ```
 
 ### 6.6 No Travel rule

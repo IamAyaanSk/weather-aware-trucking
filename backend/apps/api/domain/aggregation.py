@@ -32,11 +32,9 @@ def compute_route_metrics(
 
         weighted_risk_sum += risk * seg
 
-    avg_risk = (
-        round(weighted_risk_sum / total_distance_miles, 2)
-        if total_distance_miles > 0
-        else 0.0
-    )
+    # Only divide by non-low risk miles to avoid low-risk denominator dilution
+    risk_miles = no_travel + severe + high + moderate
+    avg_risk = round(weighted_risk_sum / risk_miles, 2) if risk_miles > 0 else 0.0
 
     return RouteMetrics(
         no_travel_miles=round(no_travel, 1),
