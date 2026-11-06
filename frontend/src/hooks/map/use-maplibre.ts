@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Map, NavigationControl, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
+import {
+  Map,
+  NavigationControl,
+  FullscreenControl,
+  setWorkerUrl,
+  type StyleSpecification,
+} from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 
 setWorkerUrl(maplibreWorkerUrl);
@@ -79,7 +85,11 @@ export function useMaplibre({
         attributionControl: {},
       });
 
-      mapInstance.addControl(new NavigationControl({ showCompass: true }), "bottom-right");
+      mapInstance.addControl(
+        new NavigationControl({ showCompass: true, visualizePitch: true }),
+        "bottom-right",
+      );
+      mapInstance.addControl(new FullscreenControl(), "top-right");
 
       mapInstance.on("load", () => {
         mapInstance.resize();
