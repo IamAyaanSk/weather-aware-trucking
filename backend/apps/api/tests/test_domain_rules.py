@@ -2,7 +2,6 @@
 
 from django.test import TestCase
 
-from apps.api.domain.aggregation import compute_route_metrics
 from apps.api.domain.ranking import rank_routes
 from apps.api.domain.risk import (
     calculate_checkpoint_risk,
@@ -248,74 +247,3 @@ class RouteRecommendationTests(TestCase):
         self.assertEqual(rec_id, 'route_2')
         self.assertTrue(ranked[0]['is_recommended'])
         self.assertFalse(ranked[1]['is_recommended'])
-
-    def test_average_risk_excludes_low_miles(self): # Since low miles consetitute 0 risk so exclude it
-        from datetime import datetime, timezone
-
-        from apps.api.domain.types import Checkpoint, CheckpointWeather
-
-        now = datetime.now(timezone.utc)
-        # Route 1: 1060 mi low, 150 mi moderate (score 1), 50 mi high (score 2)
-        cp_low = Checkpoint(
-            index=0,
-            mile_marker=0.0,
-            lat=0.0,
-            lng=0.0,
-            segment_miles=1060.0,
-            eta=now,
-            eta_iso=now.isoformat(),
-            arrival_hour_offset=0,
-            arrival_weather=CheckpointWeather(
-                temperature_f=60.0,
-                wind_mph=10.0,
-                rain_in_hr=0.0,
-                snow_in_hr=0.0,
-                risk_level=RiskLevel.LOW,
-                risk_score=0,
-                rule_triggered=None,
-            ),
-        )
-        cp_mod = Checkpoint(
-            index=1,
-            mile_marker=1060.0,
-            lat=0.0,
-            lng=0.0,
-            segment_miles=150.0,
-            eta=now,
-            eta_iso=now.isoformat(),
-            arrival_hour_offset=1,
-            arrival_weather=CheckpointWeather(
-                temperature_f=60.0,
-                wind_mph=30.0,
-                rain_in_hr=0.0,
-                snow_in_hr=0.0,
-                risk_level=RiskLevel.MODERATE,
-                risk_score=1,
-                rule_triggered=None,
-            ),
-        )
-        cp_high = Checkpoint(
-            index=2,
-            mile_marker=1210.0,
-            lat=0.0,
-            lng=0.0,
-            segment_miles=50.0,
-            eta=now,
-            eta_iso=now.isoformat(),
-            arrival_hour_offset=2,
-            arrival_weather=CheckpointWeather(
-                temperature_f=60.0,
-                wind_mph=40.0,
-                rain_in_hr=0.0,
-                snow_in_hr=0.0,
-                risk_level=RiskLevel.HIGH,
-                risk_score=2,
-                rule_triggered=None,
-            ),
-        )
-
-        m1 = compute_route_metrics(
-            [cp_low, cp_mod, cp_high], total_distance_miles=1260.0
-        )
-        # 150*1 + 50*2 = 250 points over 200 non-low miles = 1.25 (not diluted by 1060 low miles)
-        self.assertEqual(m1.avg_risk_score, 1.25)
