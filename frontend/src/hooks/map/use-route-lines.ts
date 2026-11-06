@@ -1,5 +1,10 @@
 import { useEffect } from "react";
-import { LngLatBounds, type Map, type GeoJSONSource, type MapGeoJSONFeature } from "maplibre-gl";
+import {
+  LngLatBounds,
+  type Map,
+  type GeoJSONSource,
+  type MapGeoJSONFeature,
+} from "maplibre-gl";
 import { decodePolyline } from "../../lib/polyline";
 import type { RouteItem } from "../../api/types";
 
@@ -46,8 +51,12 @@ export function useRouteLines({
     if (!map) return;
 
     const setupLayers = () => {
+      // Must have valid style loaded in MapLibre before mutating layers
+      if (!map.getStyle()) return;
+
       if (!routes || routes.length === 0) {
-        if (map.getLayer(HIT_TARGET_LAYER_ID)) map.removeLayer(HIT_TARGET_LAYER_ID);
+        if (map.getLayer(HIT_TARGET_LAYER_ID))
+          map.removeLayer(HIT_TARGET_LAYER_ID);
         if (map.getLayer(LINE_LAYER_ID)) map.removeLayer(LINE_LAYER_ID);
         if (map.getLayer(CASING_LAYER_ID)) map.removeLayer(CASING_LAYER_ID);
         if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
@@ -82,16 +91,22 @@ export function useRouteLines({
         features,
       };
 
-      const existingSource = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
+      const existingSource = map.getSource(SOURCE_ID) as
+        | GeoJSONSource
+        | undefined;
 
       if (existingSource) {
         existingSource.setData(
-          featureCollection as unknown as Parameters<GeoJSONSource["setData"]>[0],
+          featureCollection as unknown as Parameters<
+            GeoJSONSource["setData"]
+          >[0],
         );
       } else {
         map.addSource(SOURCE_ID, {
           type: "geojson",
-          data: featureCollection as unknown as Parameters<Map["addSource"]>[1] extends {
+          data: featureCollection as unknown as Parameters<
+            Map["addSource"]
+          >[1] extends {
             data: infer D;
           }
             ? D
@@ -109,7 +124,12 @@ export function useRouteLines({
           },
           paint: {
             "line-color": "#020617",
-            "line-width": ["case", ["==", ["get", "id"], selectedRouteId ?? ""], 8, 5],
+            "line-width": [
+              "case",
+              ["==", ["get", "id"], selectedRouteId ?? ""],
+              8,
+              5,
+            ],
             "line-opacity": 0.7,
           },
         });
@@ -130,8 +150,18 @@ export function useRouteLines({
               "#3b82f6",
               "#64748b",
             ],
-            "line-width": ["case", ["==", ["get", "id"], selectedRouteId ?? ""], 5, 3.5],
-            "line-opacity": ["case", ["==", ["get", "id"], selectedRouteId ?? ""], 1, 0.55],
+            "line-width": [
+              "case",
+              ["==", ["get", "id"], selectedRouteId ?? ""],
+              5,
+              3.5,
+            ],
+            "line-opacity": [
+              "case",
+              ["==", ["get", "id"], selectedRouteId ?? ""],
+              1,
+              0.55,
+            ],
           },
         });
 
@@ -150,6 +180,14 @@ export function useRouteLines({
             "line-opacity": 0.001, // Invisible visually, but fully responsive to pointer and clicks
           },
         });
+      }
+
+      // If heatmap layer exists, ensure it is below route casing
+      if (
+        map.getLayer("corridor-heatmap-layer") &&
+        map.getLayer(CASING_LAYER_ID)
+      ) {
+        map.moveLayer("corridor-heatmap-layer", CASING_LAYER_ID);
       }
 
       // Ensure hit target layer stays on top of route line
@@ -189,10 +227,10 @@ export function useRouteLines({
       }
     };
 
-    if (map.isStyleLoaded()) {
+    if (map.getStyle()) {
       setupLayers();
     } else {
-      map.once("style.load", setupLayers);
+      map.once("load", setupLayers);
     }
   }, [map, routes, selectedRouteId]);
 

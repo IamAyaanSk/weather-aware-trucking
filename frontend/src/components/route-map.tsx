@@ -5,8 +5,9 @@ import { useMapPicker } from "../hooks/map/use-map-picker";
 import { useMapCamera } from "../hooks/map/use-map-camera";
 import { useRouteLines } from "../hooks/map/use-route-lines";
 import { useRouteCheckpoints } from "../hooks/map/use-route-checkpoints";
+import { useHeatmapLayer } from "../hooks/map/use-heatmap-layer";
 import { createOriginMarkerElement, createDestinationMarkerElement } from "../lib/map-markers";
-import type { Checkpoint, LocationCoordinate, RouteItem } from "../api/types";
+import type { Checkpoint, CorridorHeatmap, LocationCoordinate, RouteItem } from "../api/types";
 import { cn } from "cn";
 
 interface RouteMapProps {
@@ -26,6 +27,8 @@ interface RouteMapProps {
   onSelectRoute?: (routeId: string) => void;
   onSelectCheckpoint?: (checkpoint: Checkpoint) => void;
   isEditing?: boolean;
+  corridorHeatmap?: CorridorHeatmap | null;
+  forecastHour?: number;
 }
 
 export function RouteMap({
@@ -45,6 +48,8 @@ export function RouteMap({
   onSelectRoute,
   onSelectCheckpoint,
   isEditing = true,
+  corridorHeatmap = null,
+  forecastHour = 0,
 }: RouteMapProps): React.JSX.Element {
   const { containerRef, map } = useMaplibre({ initialCenter, initialZoom });
   const skipCameraAnimationRef = useRef(false);
@@ -81,6 +86,9 @@ export function RouteMap({
     onUserMapInteraction: markMapInteraction,
   });
 
+  // Active Route
+  const activeRoute = routes?.find((r) => r.id === selectedRouteId) ?? routes?.[0] ?? null;
+
   // Route Lines Layer
   useRouteLines({
     map,
@@ -89,13 +97,19 @@ export function RouteMap({
     onSelectRoute,
   });
 
-  // Active Route Checkpoints Layer with interactive risk-colored circles and hover card
-  const activeRoute = routes?.find((r) => r.id === selectedRouteId) ?? routes?.[0] ?? null;
+  // Corridor Heatmap Layer (renders below route lines)
+  useHeatmapLayer({
+    map,
+    corridorHeatmap,
+    hour: forecastHour,
+  });
 
+  // Active Route Checkpoints Layer (highlights as forecast reaches checkpoint arrival hour)
   useRouteCheckpoints({
     map,
     checkpoints: activeRoute?.checkpoints,
     routeId: activeRoute?.id,
+    forecastHour,
     onSelectCheckpoint,
   });
 

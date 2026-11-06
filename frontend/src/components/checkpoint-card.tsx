@@ -59,36 +59,22 @@ export function CheckpointCard({
 
       {/* Section 1: Checkpoint summary */}
       <div>
-        <h4 className="text-sm font-bold mb-2.5 text-foreground">
-          Checkpoint summary
-        </h4>
+        <h4 className="text-sm font-bold mb-2.5 text-foreground">Checkpoint summary</h4>
         <ul className="flex flex-col gap-2 text-xs">
           <li className="flex justify-between gap-2">
-            <span className="text-muted-foreground font-medium">
-              Mile marker:
-            </span>
-            <span className="font-bold">
-              {formatDistance(checkpoint.mile_marker)}
-            </span>
+            <span className="text-muted-foreground font-medium">Mile marker:</span>
+            <span className="font-bold">{formatDistance(checkpoint.mile_marker)}</span>
           </li>
           <li className="flex justify-between gap-2">
-            <span className="text-muted-foreground font-medium">
-              Estimated arrival:
-            </span>
+            <span className="text-muted-foreground font-medium">Estimated arrival:</span>
             <span className="font-bold">{formatEta(checkpoint.eta_iso)}</span>
           </li>
           <li className="flex justify-between gap-2">
-            <span className="text-muted-foreground font-medium">
-              Trip time elapsed:
-            </span>
-            <span className="font-bold">
-              {formatHourOffset(checkpoint.arrival_hour_offset)}
-            </span>
+            <span className="text-muted-foreground font-medium">Trip time elapsed:</span>
+            <span className="font-bold">{formatHourOffset(checkpoint.arrival_hour_offset)}</span>
           </li>
           <li className="flex justify-between gap-2">
-            <span className="text-muted-foreground font-medium">
-              Coordinates:
-            </span>
+            <span className="text-muted-foreground font-medium">Coordinates:</span>
             <span className="font-bold font-mono text-[11px]">
               {formatCoordinate(checkpoint.lat, checkpoint.lng)}
             </span>
@@ -100,51 +86,37 @@ export function CheckpointCard({
 
       {/* Section 2: Weather conditions at arrival */}
       <div>
-        <h4 className="text-sm font-bold mb-2.5 text-foreground">
-          Weather conditions at arrival
-        </h4>
+        <h4 className="text-sm font-bold mb-2.5 text-foreground">Weather conditions at arrival</h4>
         {weather ? (
           <ul className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
             <li className="flex justify-between gap-1">
               <span className="text-muted-foreground font-medium">Temp:</span>
-              <span className="font-bold">
-                {formatTemperature(weather.temperature_f)}
-              </span>
+              <span className="font-bold">{formatTemperature(weather.temperature_f)}</span>
             </li>
             <li className="flex justify-between gap-1">
               <span className="text-muted-foreground font-medium">Wind:</span>
-              <span className="font-bold">
-                {weather.wind_mph.toFixed(1)} mph
-              </span>
+              <span className="font-bold">{weather.wind_mph.toFixed(1)} mph</span>
             </li>
             <li className="flex justify-between gap-1">
               <span className="text-muted-foreground font-medium">Rain:</span>
-              <span className="font-bold">
-                {formatPrecipitation(weather.rain_in_hr)}
-              </span>
+              <span className="font-bold">{formatPrecipitation(weather.rain_in_hr)}</span>
             </li>
             <li className="flex justify-between gap-1">
               <span className="text-muted-foreground font-medium">Snow:</span>
               <span className="font-bold">
-                {weather.snow_in_hr > 0
-                  ? `${weather.snow_in_hr.toFixed(1)} in/hr`
-                  : "0 in/hr"}
+                {weather.snow_in_hr > 0 ? `${weather.snow_in_hr.toFixed(1)} in/hr` : "0 in/hr"}
               </span>
             </li>
           </ul>
         ) : (
-          <p className="text-muted-foreground italic text-xs">
-            Weather data unavailable
-          </p>
+          <p className="text-muted-foreground italic text-xs">Weather data unavailable</p>
         )}
       </div>
 
       <Separator className="bg-border/60" />
 
       <div>
-        <h4 className="text-sm font-bold mb-2.5 text-foreground">
-          Risk assessment
-        </h4>
+        <h4 className="text-sm font-bold mb-2.5 text-foreground">Risk assessment</h4>
 
         {ruleDetails && (
           <div className="mb-2.5 p-2.5 text-xs">
@@ -159,16 +131,12 @@ export function CheckpointCard({
 
         <ul className="flex flex-row justify-between gap-2 flex-wrap text-xs">
           <li className={cn("flex gap-1.5", risk.textClass)}>
-            <span className="text-muted-foreground font-medium">
-              Risk level:
-            </span>
+            <span className="text-muted-foreground font-medium">Risk level:</span>
             <span className="font-bold">{risk.label}</span>
           </li>
           <li className="flex gap-1.5">
             <span className="text-muted-foreground font-medium">Score:</span>
-            <span className="font-bold">
-              {weather ? `${weather.risk_score} / 4` : "N/A"}
-            </span>
+            <span className="font-bold">{weather ? `${weather.risk_score} / 4` : "N/A"}</span>
           </li>
         </ul>
       </div>

@@ -8,16 +8,24 @@ interface UseRouteCheckpointsOptions {
   map: Map | null;
   checkpoints?: Checkpoint[];
   routeId?: string | null;
+  forecastHour?: number;
   onSelectCheckpoint?: (checkpoint: Checkpoint) => void;
+}
+
+interface MarkerRecord {
+  marker: Marker;
+  element: HTMLElement;
+  checkpoint: Checkpoint;
 }
 
 export function useRouteCheckpoints({
   map,
   checkpoints,
   routeId,
+  forecastHour = 0,
   onSelectCheckpoint,
 }: UseRouteCheckpointsOptions) {
-  const markersRef = useRef<Marker[]>([]);
+  const markerRecordsRef = useRef<MarkerRecord[]>([]);
   const activeMarkerElRef = useRef<HTMLElement | null>(null);
   const popupRef = useRef<Popup | null>(null);
   const onSelectCheckpointRef = useRef(onSelectCheckpoint);
@@ -49,8 +57,8 @@ export function useRouteCheckpoints({
 
     // Helper to clear existing markers and popup
     const clearMarkers = () => {
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
+      markerRecordsRef.current.forEach((rec) => rec.marker.remove());
+      markerRecordsRef.current = [];
       if (popupRef.current) {
         popupRef.current.remove();
       }
@@ -74,12 +82,12 @@ export function useRouteCheckpoints({
       const risk = getRiskConfig(cp.arrival_weather?.risk_level);
       const isModerate = risk.level === "MODERATE";
 
-      // Outer marker container with maximum z-index (MapLibre controls its transform)
+      // Outer marker container (MapLibre controls its transform)
       const markerContainer = document.createElement("div");
       markerContainer.className = "spotter-checkpoint-marker";
       markerContainer.setAttribute(
         "title",
-        `Checkpoint #${cp.index + 1} (${risk.label}) - Click to view details`,
+        `Checkpoint #${cp.index + 1} (ETA +${cp.arrival_hour_offset}h • ${risk.label}) - Click to view details`,
       );
 
       // Inner badge container (receives hover & active scale animations without shifting coordinates)
@@ -107,10 +115,7 @@ export function useRouteCheckpoints({
         e.stopPropagation();
 
         // Deactivate previous marker
-        if (
-          activeMarkerElRef.current &&
-          activeMarkerElRef.current !== markerContainer
-        ) {
+        if (activeMarkerElRef.current && activeMarkerElRef.current !== markerContainer) {
           activeMarkerElRef.current.classList.remove("is-active");
         }
 
@@ -124,9 +129,7 @@ export function useRouteCheckpoints({
           popup.setLngLat([cp.lng, cp.lat]).setHTML(html).addTo(map);
 
           // Attach close button handler inside popup
-          const closeBtn = popup
-            .getElement()
-            .querySelector(".checkpoint-popup-close-btn");
+          const closeBtn = popup.getElement().querySelector(".checkpoint-popup-close-btn");
           if (closeBtn) {
             closeBtn.addEventListener("click", (ev) => {
               ev.stopPropagation();
@@ -140,7 +143,7 @@ export function useRouteCheckpoints({
         onSelectCheckpointRef.current?.(cp);
       });
 
-      // Anchor center ensures circle is perfectly centered on route coordinate
+      // Anchor center ensures diamond is perfectly centered on route coordinate
       const marker = new Marker({
         element: markerContainer,
         anchor: "center",
@@ -148,17 +151,17 @@ export function useRouteCheckpoints({
         .setLngLat([cp.lng, cp.lat])
         .addTo(map);
 
-      markersRef.current.push(marker);
+      markerRecordsRef.current.push({
+        marker,
+        element: markerContainer,
+        checkpoint: cp,
+      });
     });
 
     // Dismiss active checkpoint popup when clicking anywhere else on the map canvas
     const handleMapClick = (e: { originalEvent?: MouseEvent }) => {
       const popupEl = popup?.getElement();
-      if (
-        popupEl &&
-        e.originalEvent?.target &&
-        popupEl.contains(e.originalEvent.target as Node)
-      ) {
+      if (popupEl && e.originalEvent?.target && popupEl.contains(e.originalEvent.target as Node)) {
         return;
       }
 
@@ -178,4 +181,44 @@ export function useRouteCheckpoints({
       clearMarkers();
     };
   }, [map, checkpoints, routeId]);
+
+  // Dynamically highlight checkpoints when the forecast slider reaches or matches their arrival hour
+  useEffect(() => {
+    const records = markerRecordsRef.current;
+    if (records.length === 0) return;
+
+    // Find the closest reached checkpoint or matching checkpoint
+    let closestReachedIdx = -1;
+    for (let i = 0; i < records.length; i++) {
+      if (records[i].checkpoint.arrival_hour_offset <= forecastHour) {
+        closestReachedIdx = i;
+      } else {
+        break;
+      }
+    }
+
+    records.forEach((rec, idx) => {
+      const offset = rec.checkpoint.arrival_hour_offset;
+      const isExactMatch = offset === forecastHour;
+      const isCurrentHead = idx === closestReachedIdx;
+      const isReached = offset <= forecastHour;
+
+      // Current forecast checkpoint gets the luminous highlight ring
+      const isCurrentForecast = isExactMatch || isCurrentHead;
+
+      if (isCurrentForecast) {
+        rec.element.classList.add("is-current-forecast");
+        rec.element.classList.remove("is-future");
+        rec.element.classList.add("is-reached");
+      } else if (isReached) {
+        rec.element.classList.remove("is-current-forecast");
+        rec.element.classList.remove("is-future");
+        rec.element.classList.add("is-reached");
+      } else {
+        rec.element.classList.remove("is-current-forecast");
+        rec.element.classList.remove("is-reached");
+        rec.element.classList.add("is-future");
+      }
+    });
+  }, [forecastHour]);
 }
