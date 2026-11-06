@@ -118,11 +118,16 @@
   --spacing: 0.25rem;
   --shadow-2xs: 0px 4px 10px 0px hsl(0 0 0 / 0.03);
   --shadow-xs: 0px 4px 10px 0px hsl(0 0 0 / 0.03);
-  --shadow-sm: 0px 4px 10px 0px hsl(0 0 0 / 0.05), 0px 1px 2px -1px hsl(0 0 0 / 0.05);
-  --shadow: 0px 4px 10px 0px hsl(0 0 0 / 0.05), 0px 1px 2px -1px hsl(0 0 0 / 0.05);
-  --shadow-md: 0px 4px 10px 0px hsl(0 0 0 / 0.05), 0px 2px 4px -1px hsl(0 0 0 / 0.05);
-  --shadow-lg: 0px 4px 10px 0px hsl(0 0 0 / 0.05), 0px 4px 6px -1px hsl(0 0 0 / 0.05);
-  --shadow-xl: 0px 4px 10px 0px hsl(0 0 0 / 0.05), 0px 8px 10px -1px hsl(0 0 0 / 0.05);
+  --shadow-sm:
+    0px 4px 10px 0px hsl(0 0 0 / 0.05), 0px 1px 2px -1px hsl(0 0 0 / 0.05);
+  --shadow:
+    0px 4px 10px 0px hsl(0 0 0 / 0.05), 0px 1px 2px -1px hsl(0 0 0 / 0.05);
+  --shadow-md:
+    0px 4px 10px 0px hsl(0 0 0 / 0.05), 0px 2px 4px -1px hsl(0 0 0 / 0.05);
+  --shadow-lg:
+    0px 4px 10px 0px hsl(0 0 0 / 0.05), 0px 4px 6px -1px hsl(0 0 0 / 0.05);
+  --shadow-xl:
+    0px 4px 10px 0px hsl(0 0 0 / 0.05), 0px 8px 10px -1px hsl(0 0 0 / 0.05);
   --shadow-2xl: 0px 4px 10px 0px hsl(0 0 0 / 0.13);
   --tracking-normal: -0.015em;
 }
@@ -174,11 +179,16 @@
   --spacing: 0.25rem;
   --shadow-2xs: 0px 8px 15px 0px hsl(0 0 0 / 0.15);
   --shadow-xs: 0px 8px 15px 0px hsl(0 0 0 / 0.15);
-  --shadow-sm: 0px 8px 15px 0px hsl(0 0 0 / 0.3), 0px 1px 2px -1px hsl(0 0 0 / 0.3);
-  --shadow: 0px 8px 15px 0px hsl(0 0 0 / 0.3), 0px 1px 2px -1px hsl(0 0 0 / 0.3);
-  --shadow-md: 0px 8px 15px 0px hsl(0 0 0 / 0.3), 0px 2px 4px -1px hsl(0 0 0 / 0.3);
-  --shadow-lg: 0px 8px 15px 0px hsl(0 0 0 / 0.3), 0px 4px 6px -1px hsl(0 0 0 / 0.3);
-  --shadow-xl: 0px 8px 15px 0px hsl(0 0 0 / 0.3), 0px 8px 10px -1px hsl(0 0 0 / 0.3);
+  --shadow-sm:
+    0px 8px 15px 0px hsl(0 0 0 / 0.3), 0px 1px 2px -1px hsl(0 0 0 / 0.3);
+  --shadow:
+    0px 8px 15px 0px hsl(0 0 0 / 0.3), 0px 1px 2px -1px hsl(0 0 0 / 0.3);
+  --shadow-md:
+    0px 8px 15px 0px hsl(0 0 0 / 0.3), 0px 2px 4px -1px hsl(0 0 0 / 0.3);
+  --shadow-lg:
+    0px 8px 15px 0px hsl(0 0 0 / 0.3), 0px 4px 6px -1px hsl(0 0 0 / 0.3);
+  --shadow-xl:
+    0px 8px 15px 0px hsl(0 0 0 / 0.3), 0px 8px 10px -1px hsl(0 0 0 / 0.3);
   --shadow-2xl: 0px 8px 15px 0px hsl(0 0 0 / 0.75);
 }
 
@@ -210,13 +220,17 @@
   background-color: var(--color-card) !important;
   border: 1px solid var(--color-border) !important;
   border-radius: var(--radius-lg) !important;
-  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.12), 0 1px 3px 0 rgba(0, 0, 0, 0.08) !important;
+  box-shadow:
+    0 4px 14px 0 rgba(0, 0, 0, 0.12),
+    0 1px 3px 0 rgba(0, 0, 0, 0.08) !important;
   overflow: hidden;
   backdrop-filter: blur(8px);
 }
 
 .maplibregl-ctrl-group:not(:empty) {
-  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.12), 0 1px 3px 0 rgba(0, 0, 0, 0.08) !important;
+  box-shadow:
+    0 4px 14px 0 rgba(0, 0, 0, 0.12),
+    0 1px 3px 0 rgba(0, 0, 0, 0.08) !important;
 }
 
 .maplibregl-ctrl-group button {
@@ -308,7 +322,11 @@
 }
 
 .maplibregl-ctrl-attrib {
-  background: color-mix(in oklch, var(--color-card) 80%, transparent) !important;
+  background: color-mix(
+    in oklch,
+    var(--color-card) 80%,
+    transparent
+  ) !important;
   backdrop-filter: blur(6px);
   color: var(--color-muted-foreground) !important;
   border: 1px solid var(--color-border) !important;
@@ -382,7 +400,9 @@
   cursor: pointer;
   z-index: 10 !important;
   pointer-events: auto;
-  transition: opacity 0.2s ease, filter 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease;
 }
 
 .spotter-checkpoint-marker.is-active {
@@ -456,7 +476,8 @@
 }
 
 @keyframes checkpoint-luminous-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow:
       0 0 0 3px #38bdf8,
       0 0 14px rgba(56, 189, 248, 0.75),
@@ -520,4 +541,68 @@
 
 .checkpoint-popup.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
   border-top-color: var(--color-card) !important;
+}
+
+/* Route On-Map Label Pill (Matches Google/Apple Maps & UI mockup) */
+.spotter-route-label-marker {
+  cursor: pointer;
+  pointer-events: auto;
+  user-select: none;
+  z-index: 18;
+}
+
+.spotter-route-label-marker.is-selected {
+  z-index: 22;
+}
+
+.spotter-route-label-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 3.5px 11px;
+  border-radius: 9999px;
+  background-color: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+  color: #ffffff;
+  font-family: var(--font-sans, "Inter", sans-serif);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.spotter-route-label-marker:hover .spotter-route-label-pill {
+  transform: scale(1.04);
+  background-color: rgba(15, 23, 42, 0.96);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.spotter-route-label-marker.is-selected .spotter-route-label-pill {
+  border-color: #3b82f6;
+  box-shadow:
+    0 0 0 1.5px rgba(59, 130, 246, 0.5),
+    0 4px 14px rgba(0, 0, 0, 0.55);
+}
+
+.spotter-route-label-marker.is-unselected .spotter-route-label-pill {
+  opacity: 0.88;
+}
+
+.spotter-route-label-marker.is-unselected:hover .spotter-route-label-pill {
+  opacity: 1;
+}
+
+.spotter-route-label-dot {
+  opacity: 0.65;
+  font-weight: 800;
 }

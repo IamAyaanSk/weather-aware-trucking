@@ -4,6 +4,7 @@ import { useDraggableMarker } from "../hooks/map/use-draggable-marker";
 import { useMapPicker } from "../hooks/map/use-map-picker";
 import { useMapCamera } from "../hooks/map/use-map-camera";
 import { useRouteLines } from "../hooks/map/use-route-lines";
+import { useRouteLabels } from "../hooks/map/use-route-labels";
 import { useRouteCheckpoints } from "../hooks/map/use-route-checkpoints";
 import { useHeatmapLayer } from "../hooks/map/use-heatmap-layer";
 import { createOriginMarkerElement, createDestinationMarkerElement } from "../lib/map-markers";
@@ -91,6 +92,14 @@ export function RouteMap({
 
   // Route Lines Layer
   useRouteLines({
+    map,
+    routes,
+    selectedRouteId,
+    onSelectRoute,
+  });
+
+  // Route On-Map Labels (Recommended, 2nd best, etc.)
+  useRouteLabels({
     map,
     routes,
     selectedRouteId,
