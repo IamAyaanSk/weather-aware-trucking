@@ -1,7 +1,3 @@
-/**
- * DOM Marker Element creators for MapLibre map pins.
- */
-
 export function createOriginMarkerElement(): HTMLElement {
   const container = document.createElement("div");
   container.className = "spotter-marker origin-marker group";

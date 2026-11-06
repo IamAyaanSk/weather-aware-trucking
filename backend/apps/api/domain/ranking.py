@@ -9,7 +9,7 @@ def rank_routes(
 ) -> tuple[list[Any], str | None, bool]:
     """Sort routes ascending by ranking tuple and determine the recommended route."""
 
-    def _sort_key(r: Any) -> tuple[float, float, float, float, float, int]:
+    def _sort_key(r: Any) -> tuple[float, float, float, float, float, float, int]:
         metrics = r['metrics']
         return (
             float(metrics['no_travel_miles']),
@@ -17,6 +17,7 @@ def rank_routes(
             float(metrics['high_miles']),
             float(metrics['avg_risk_score']),
             float(r['total_duration_hours']),
+            float(r.get('total_distance_miles', 0.0)),
             int(r.get('source_index', 0)),
         )
 

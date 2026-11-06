@@ -23,7 +23,6 @@ export function useDraggableMarker({
   const markerRef = useRef<Marker | null>(null);
   const isDraggingRef = useRef(false);
 
-  // Keep latest callbacks in ref to avoid recreating event handlers
   const onChangeRef = useRef(onChange);
   const onDragStateChangeRef = useRef(onDragStateChange);
 

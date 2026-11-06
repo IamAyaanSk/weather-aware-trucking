@@ -7,7 +7,7 @@ export interface HeatmapFeature {
     coordinates: [number, number]; // [lng, lat]
   };
   properties: {
-    weight: number; // 0.0 .. 1.0 risk intensity
+    weight: number;
   };
 }
 

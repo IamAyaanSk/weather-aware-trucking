@@ -66,10 +66,13 @@ export function RoutePlannerPanel({
   error = null,
 }: RoutePlannerPanelProps): React.JSX.Element {
   const [loadWeightLbs, setLoadWeightLbs] = useState<number>(35000);
-  const [departureTime, setDepartureTime] = useState<string>(() => formatLocalDateTime(new Date()));
+  const [departureTime, setDepartureTime] = useState<string>(() =>
+    formatLocalDateTime(new Date()),
+  );
   const [internalEditingForm, setInternalEditingForm] = useState(false);
 
-  const isEditingForm = isEditingProp !== undefined ? isEditingProp : internalEditingForm;
+  const isEditingForm =
+    isEditingProp !== undefined ? isEditingProp : internalEditingForm;
   const setIsEditingForm = onToggleEditing ?? setInternalEditingForm;
 
   const hasRoutes = Boolean(routes && routes.length > 0);
@@ -161,7 +164,10 @@ export function RoutePlannerPanel({
                 </div>
 
                 <div>
-                  <label htmlFor="readonly-destination-input" className="sr-only">
+                  <label
+                    htmlFor="readonly-destination-input"
+                    className="sr-only"
+                  >
                     Destination
                   </label>
                   <Input
@@ -212,7 +218,7 @@ export function RoutePlannerPanel({
                     <AccordionItem
                       key={route.id}
                       value={route.id}
-                      className="transition-colors not-last:border-b not-last:border-border/80"
+                      className="transition-colors not-last:border-b not-last:border-border not-last:border-b-muted-foreground"
                     >
                       <AccordionTrigger
                         onClick={() => onSelectRoute?.(route.id)}
@@ -306,39 +312,37 @@ export function RoutePlannerPanel({
                             <ul className="flex flex-row justify-between gap-3.5 flex-wrap">
                               <li className="flex gap-1.5 text-green-300/80">
                                 <span>Low:</span>{" "}
-                                <span>{formatDistance(route.metrics.low_miles)}</span>
+                                <span>
+                                  {formatDistance(route.metrics.low_miles)}
+                                </span>
                               </li>
                               <li className="flex gap-1.5 text-yellow-300/80">
                                 <span>Moderate:</span>{" "}
-                                <span>{formatDistance(route.metrics.moderate_miles)}</span>
+                                <span>
+                                  {formatDistance(route.metrics.moderate_miles)}
+                                </span>
                               </li>
                               <li className="flex gap-1.5 text-orange-300/80">
                                 <span>High:</span>{" "}
-                                <span>{formatDistance(route.metrics.high_miles)}</span>
+                                <span>
+                                  {formatDistance(route.metrics.high_miles)}
+                                </span>
                               </li>
                               <li className="flex gap-1.5 text-red-300/80">
                                 <span>Severe:</span>{" "}
-                                <span>{formatDistance(route.metrics.severe_miles)}</span>
+                                <span>
+                                  {formatDistance(route.metrics.severe_miles)}
+                                </span>
                               </li>
                               <li className="flex gap-1.5 text-amber-600/80">
                                 <span>No-Travel:</span>{" "}
-                                <span>{formatDistance(route.metrics.no_travel_miles)}</span>
+                                <span>
+                                  {formatDistance(
+                                    route.metrics.no_travel_miles,
+                                  )}
+                                </span>
                               </li>
                             </ul>
-                          </div>
-
-                          {/* Checkpoints dummy link at down right */}
-                          <div className="flex justify-end pt-1">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                console.log("Checkpoints for route", route.id, route.checkpoints);
-                              }}
-                              className="text-[11px] text-primary hover:underline font-medium cursor-pointer"
-                            >
-                              View checkpoints ({route.checkpoints.length}) →
-                            </button>
                           </div>
                         </div>
                       </AccordionContent>
@@ -387,7 +391,9 @@ export function RoutePlannerPanel({
                     iconType="origin"
                     isPickingOnMap={pickingTarget === "origin"}
                     onTogglePickOnMap={
-                      onTogglePickOnMap ? () => onTogglePickOnMap("origin") : undefined
+                      onTogglePickOnMap
+                        ? () => onTogglePickOnMap("origin")
+                        : undefined
                     }
                   />
                 </div>
@@ -405,7 +411,9 @@ export function RoutePlannerPanel({
                     iconType="destination"
                     isPickingOnMap={pickingTarget === "destination"}
                     onTogglePickOnMap={
-                      onTogglePickOnMap ? () => onTogglePickOnMap("destination") : undefined
+                      onTogglePickOnMap
+                        ? () => onTogglePickOnMap("destination")
+                        : undefined
                     }
                   />
                 </div>
@@ -445,7 +453,9 @@ export function RoutePlannerPanel({
                   step={500}
                   value={loadWeightLbs}
                   disabled={isPending}
-                  onChange={(e) => setLoadWeightLbs(Math.max(0, Number(e.target.value) || 0))}
+                  onChange={(e) =>
+                    setLoadWeightLbs(Math.max(0, Number(e.target.value) || 0))
+                  }
                   className="h-10 pr-12 text-sm bg-background/70 border-input rounded-lg focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
@@ -485,7 +495,8 @@ export function RoutePlannerPanel({
             {/* Error Feedback */}
             {error && !isPending && (
               <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-2.5">
-                {error.message || "Could not retrieve route plan. Please check inputs and retry."}
+                {error.message ||
+                  "Could not retrieve route plan. Please check inputs and retry."}
               </p>
             )}
 
@@ -524,15 +535,41 @@ export function RoutePlannerPanel({
         )}
       </div>
 
-      {/* Bottom Section: Route Insights Card (Shown only before routes plan) */}
+      {/* Bottom Section: Route Insights Card (Shown before routes plan) */}
       {!hasRoutes && !isPending && (
         <div className="p-4 mt-auto shrink-0">
           <div className="relative h-38 overflow-hidden rounded-sm bg-background/60 p-4 shadow-xs">
             <div className="relative z-10 space-y-1 pr-24">
-              <h3 className="text-sm font-medium text-foreground">Route insights</h3>
+              <h3 className="text-sm font-medium text-foreground">
+                Route insights
+              </h3>
               <p className="text-xs text-muted-foreground/70">
-                Plan your route simply by getting each analysis on the optimal route and predict how
-                your journey would be.
+                Plan your route simply by getting each analysis on the optimal
+                route and predict how your journey would be.
+              </p>
+            </div>
+
+            <img
+              src="/assets/truck.svg"
+              alt="Truck"
+              className="absolute right-0 -bottom-1 w-40 h-auto pointer-events-none opacity-85 object-contain"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Section: Route Alternatives Card (Shown both when viewing routes and during editing mode) */}
+      {hasRoutes && (
+        <div className="p-4 mt-auto shrink-0">
+          <div className="relative h-38 overflow-hidden rounded-sm bg-background/60 p-4 shadow-xs">
+            <div className="relative z-10 space-y-1 pr-24">
+              <h3 className="text-sm font-medium text-foreground">
+                Route alternatives
+              </h3>
+              <p className="text-xs text-muted-foreground/70 leading-relaxed">
+                Up to 3 commercial truck corridors are evaluated and mapped.
+                Available alternatives may vary based on highway network
+                infrastructure and vehicle clearance limits.
               </p>
             </div>
 
