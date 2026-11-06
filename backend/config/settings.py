@@ -45,6 +45,11 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-only-insecure-secret-key')
 DEBUG = env_bool('DJANGO_DEBUG', True)
 
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', '')
+
+# Reverse proxy headers (for Caddy / Nginx TLS termination)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 
 # Application definition
@@ -95,10 +100,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+sqlite_db_env = os.getenv('SQLITE_DB_PATH')
+if sqlite_db_env:
+    sqlite_path = Path(sqlite_db_env)
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+else:
+    sqlite_path = BASE_DIR / 'db.sqlite3'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': sqlite_path,
     }
 }
 
