@@ -67,7 +67,7 @@ export function RoutePlannerPanel({
   error = null,
   onCloseMobile,
 }: RoutePlannerPanelProps): React.JSX.Element {
-  const [loadWeightLbs, setLoadWeightLbs] = useState<number>(35000);
+  const [loadWeightInput, setLoadWeightInput] = useState<string>("35000");
   const [departureTime, setDepartureTime] = useState<string>(() =>
     formatLocalDateTime(new Date()),
   );
@@ -97,10 +97,15 @@ export function RoutePlannerPanel({
       return;
     }
     setIsEditingForm(false);
+    const parsedLoadWeight =
+      loadWeightInput.trim() === ""
+        ? 0
+        : Math.max(0, parseInt(loadWeightInput, 10) || 0);
+
     onPlanRoute?.({
       origin,
       destination,
-      loadWeightLbs,
+      loadWeightLbs: parsedLoadWeight,
       departureTime,
     });
   };
@@ -466,12 +471,11 @@ export function RoutePlannerPanel({
                   type="number"
                   min={0}
                   max={80000}
-                  step={500}
-                  value={loadWeightLbs}
+                  step={1}
+                  placeholder="0"
+                  value={loadWeightInput}
                   disabled={isPending}
-                  onChange={(e) =>
-                    setLoadWeightLbs(Math.max(0, Number(e.target.value) || 0))
-                  }
+                  onChange={(e) => setLoadWeightInput(e.target.value)}
                   className="h-10 pr-12 text-sm bg-background/70 border-input rounded-lg focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
