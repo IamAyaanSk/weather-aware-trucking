@@ -5,7 +5,7 @@ WORKDIR /app
 # Enable bytecode compilation, copy link mode, and allow managed python download
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
-ENV UV_PYTHON_DOWNLOADS=always
+ENV UV_PYTHON_DOWNLOADS=true
 ENV PYTHONUNBUFFERED=1
 
 # Install project dependencies first (layer caching)
