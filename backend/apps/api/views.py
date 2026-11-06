@@ -1,6 +1,7 @@
 import uuid
 from datetime import UTC
 
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import (
@@ -12,6 +13,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from apps.api.auth import get_expected_token
 from apps.api.domain.aggregation import compute_route_metrics
 from apps.api.domain.checkpoints import (
     determine_sample_interval_miles,
@@ -21,6 +23,7 @@ from apps.api.domain.heatmap import build_corridor_heatmap
 from apps.api.domain.ranking import rank_routes
 from apps.api.domain.types import Checkpoint
 from apps.api.models import RouteAnalysis
+from apps.api.permissions import HasSiteAccess
 from apps.api.serializers import PlanRouteQuerySerializer
 from apps.api.services.analysis_cache import (
     build_reused_response,
@@ -46,9 +49,37 @@ def health(_request: Request) -> Response:
     return Response({'status': 'ok'})
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
+def verify_access_code(request: Request) -> Response:
+    """Verify shared site access password and return derived bearer token."""
+    entered_password = str(request.data.get('password', '')).strip()
+    configured_password = str(getattr(settings, 'SITE_ACCESS_PASSWORD', '')).strip()
+
+    if not configured_password or entered_password == configured_password:
+        return Response(
+            {
+                'status': 'ok',
+                'token': get_expected_token(),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    return Response(
+        {
+            'error': {
+                'code': 'invalid_passcode',
+                'message': 'Incorrect access password. Please try again.',
+            }
+        },
+        status=status.HTTP_401_UNAUTHORIZED,
+    )
+
+
+@api_view(['GET'])
+@authentication_classes([])
+@permission_classes([HasSiteAccess])
 def plan_route(request: Request) -> Response:
     """Plan routes or return a cached analysis within 1 hour."""
     serializer = PlanRouteQuerySerializer(data=request.query_params)

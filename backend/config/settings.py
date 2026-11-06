@@ -151,7 +151,7 @@ MAILERS = {
 
 
 CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')
-CORS_ALLOW_HEADERS = [*default_headers, 'x-client-id']
+CORS_ALLOW_HEADERS = [*default_headers, 'x-client-id', 'x-site-access-token']
 
 
 REST_FRAMEWORK = {
@@ -160,6 +160,10 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {'anon': '120/min'},
     'EXCEPTION_HANDLER': 'apps.api.exceptions.custom_exception_handler',
 }
+
+
+# Site demo access passphrase
+SITE_ACCESS_PASSWORD = os.getenv('SITE_ACCESS_PASSWORD', 'spotter2026')
 
 
 HTTP_TIMEOUT_SECONDS = float(os.getenv('HTTP_TIMEOUT_SECONDS', '15'))

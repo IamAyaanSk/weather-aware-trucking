@@ -1,6 +1,7 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -8,9 +9,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "#components/ui/sidebar";
-import { Route, Package, Users, Container, CreditCard, Truck } from "lucide-react";
+import { Route, Package, Users, Container, CreditCard, Truck, Lock } from "lucide-react";
 import type { ComponentType } from "react";
 import { Link } from "@tanstack/react-router";
+import { clearStoredSiteToken } from "../api/client";
 
 interface NavItem {
   title: string;
@@ -99,6 +101,24 @@ export function AppSidebar(): React.JSX.Element {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="flex items-center justify-center pb-3">
+        <SidebarMenu className="items-center">
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Lock Showcase"
+              onClick={() => {
+                clearStoredSiteToken();
+                window.dispatchEvent(new CustomEvent("spotter:unauthorized"));
+              }}
+              className="text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              <Lock className="size-4" />
+              <span className="sr-only">Lock Showcase</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
