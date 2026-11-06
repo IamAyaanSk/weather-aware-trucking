@@ -3,11 +3,13 @@ import { RoutePlannerPanel } from "../components/route-planner-panel";
 import { RouteMap } from "../components/route-map";
 import { ForecastSlider } from "../components/forecast-slider";
 import { useRoutePlanQuery } from "../hooks/queries/use-route-plan-query";
+import { useIsMobile } from "../hooks/use-mobile";
 import type { LocationCoordinate, PlanRouteRequest } from "../api/types";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, PanelLeft } from "lucide-react";
 import { cn } from "cn";
 
 export function PlanRoutePage(): React.JSX.Element {
+  const isMobile = useIsMobile();
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [origin, setOrigin] = useState<LocationCoordinate | null>(null);
   const [destination, setDestination] = useState<LocationCoordinate | null>(
@@ -48,7 +50,13 @@ export function PlanRoutePage(): React.JSX.Element {
     : 48;
 
   const handleTogglePickOnMap = (target: "origin" | "destination") => {
-    setPickingTarget((prev) => (prev === target ? null : target));
+    setPickingTarget((prev) => {
+      const next = prev === target ? null : target;
+      if (next && isMobile) {
+        setIsPanelCollapsed(true);
+      }
+      return next;
+    });
   };
 
   const handlePickLocation = (
@@ -61,6 +69,16 @@ export function PlanRoutePage(): React.JSX.Element {
       setDestination(location);
     }
     setPickingTarget(null);
+    if (isMobile) {
+      setIsPanelCollapsed(false);
+    }
+  };
+
+  const handleCancelPick = () => {
+    setPickingTarget(null);
+    if (isMobile) {
+      setIsPanelCollapsed(false);
+    }
   };
 
   const handlePlanRoute = (params: {
@@ -71,6 +89,9 @@ export function PlanRoutePage(): React.JSX.Element {
   }) => {
     setIsEditingForm(false);
     setForecastHour(0);
+    if (isMobile) {
+      setIsPanelCollapsed(true);
+    }
     const inputDate = new Date(params.departureTime);
     const now = new Date();
 
@@ -94,7 +115,7 @@ export function PlanRoutePage(): React.JSX.Element {
           onDestinationChange={setDestination}
           pickingTarget={pickingTarget}
           onPickLocation={handlePickLocation}
-          onCancelPick={() => setPickingTarget(null)}
+          onCancelPick={handleCancelPick}
           isPlanning={routePlanQuery.isFetching}
           routes={routes}
           selectedRouteId={activeRouteId}
@@ -105,8 +126,21 @@ export function PlanRoutePage(): React.JSX.Element {
         />
       </div>
 
-      {hasRoutes && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
+      {/* Floating button on map when panel is collapsed */}
+      {isPanelCollapsed && (
+        <button
+          type="button"
+          onClick={() => setIsPanelCollapsed(false)}
+          className="absolute top-4 left-4 z-30 flex items-center gap-2 rounded-full border border-border/80 bg-card/95 px-3.5 py-2 text-xs font-semibold text-foreground shadow-xl backdrop-blur-md transition-all hover:bg-card hover:scale-105 active:scale-95 cursor-pointer"
+        >
+          <PanelLeft className="size-4 text-primary" />
+          <span>{hasRoutes ? `Routes (${routes?.length ?? 0})` : "Plan Route"}</span>
+        </button>
+      )}
+
+      {/* Forecast Slider (Visible when routes exist; on mobile, only when panel is collapsed) */}
+      {hasRoutes && (!isMobile || isPanelCollapsed) && (
+        <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
           <ForecastSlider
             currentHour={forecastHour}
             maxHours={maxForecastHours}
@@ -117,9 +151,10 @@ export function PlanRoutePage(): React.JSX.Element {
         </div>
       )}
 
+      {/* Side Planning & Results Panel */}
       <div
         className={cn(
-          "absolute top-0 bottom-0 left-0 z-20 transition-transform duration-300 ease-in-out",
+          "absolute top-0 bottom-0 left-0 z-30 transition-transform duration-300 ease-in-out",
           isPanelCollapsed ? "-translate-x-full" : "translate-x-0",
         )}
       >
@@ -138,12 +173,14 @@ export function PlanRoutePage(): React.JSX.Element {
           isEditingForm={isEditingForm}
           onToggleEditing={setIsEditingForm}
           error={routePlanQuery.error}
+          onCloseMobile={() => setIsPanelCollapsed(true)}
         />
 
+        {/* Desktop Side Toggle Button */}
         <button
           type="button"
           onClick={() => setIsPanelCollapsed((prev) => !prev)}
-          className="absolute -right-5 top-1/2 -translate-y-1/2 z-30 flex h-14 w-5 items-center justify-center rounded-r-lg border-y border-r border-border/80 bg-card/95 text-muted-foreground shadow-md backdrop-blur-md transition-colors hover:bg-card hover:text-foreground cursor-pointer select-none"
+          className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 z-30 h-14 w-5 items-center justify-center rounded-r-lg border-y border-r border-border/80 bg-card/95 text-muted-foreground shadow-md backdrop-blur-md transition-colors hover:bg-card hover:text-foreground cursor-pointer select-none"
           title={
             isPanelCollapsed
               ? "Expand route planning panel"

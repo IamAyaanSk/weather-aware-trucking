@@ -36,6 +36,7 @@ interface RoutePlannerPanelProps {
   isEditingForm?: boolean;
   onToggleEditing?: (isEditing: boolean) => void;
   error?: Error | null;
+  onCloseMobile?: () => void;
 }
 
 function formatLocalDateTime(date: Date): string {
@@ -64,6 +65,7 @@ export function RoutePlannerPanel({
   isEditingForm: isEditingProp,
   onToggleEditing,
   error = null,
+  onCloseMobile,
 }: RoutePlannerPanelProps): React.JSX.Element {
   const [loadWeightLbs, setLoadWeightLbs] = useState<number>(35000);
   const [departureTime, setDepartureTime] = useState<string>(() =>
@@ -108,18 +110,32 @@ export function RoutePlannerPanel({
   return (
     <aside
       className={cn(
-        "flex h-full w-[380px] flex-col border-r border-border/80 bg-card/95 backdrop-blur-md rounded-tr-2xl rounded-br-2xl shadow-2xl overflow-hidden shrink-0",
+        "flex h-full w-screen sm:w-[380px] max-w-full sm:max-w-[380px] flex-col border-r border-border/80 bg-card/95 backdrop-blur-md rounded-none sm:rounded-tr-2xl sm:rounded-br-2xl shadow-2xl overflow-hidden shrink-0",
         className,
       )}
     >
       {/* Top Header */}
-      <div className="border-b border-border/70 px-5 py-4 shrink-0">
-        <h1 className="text-sm font-semibold tracking-tight text-foreground">
-          Weather aware route planning
-        </h1>
-        <p className="text-[11px] text-muted-foreground mt-0.5">
-          Corridor analysis & risk assessment
-        </p>
+      <div className="border-b border-border/70 px-4 sm:px-5 py-3.5 sm:py-4 shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-sm font-semibold tracking-tight text-foreground">
+            Weather aware route planning
+          </h1>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Corridor analysis & risk assessment
+          </p>
+        </div>
+        {onCloseMobile && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onCloseMobile}
+            className="md:hidden flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8 px-2.5 rounded-lg border border-border/60 bg-background/50 cursor-pointer"
+          >
+            <Map className="size-3.5" />
+            <span>Map</span>
+          </Button>
+        )}
       </div>
 
       {/* Main Content (Scrollable) */}
@@ -537,7 +553,7 @@ export function RoutePlannerPanel({
 
       {/* Bottom Section: Route Insights Card (Shown before routes plan) */}
       {!hasRoutes && !isPending && (
-        <div className="p-4 mt-auto shrink-0">
+        <div className="p-4 mt-auto shrink-0 hidden sm:block">
           <div className="relative h-38 overflow-hidden rounded-sm bg-background/60 p-4 shadow-xs">
             <div className="relative z-10 space-y-1 pr-24">
               <h3 className="text-sm font-medium text-foreground">
@@ -560,7 +576,7 @@ export function RoutePlannerPanel({
 
       {/* Bottom Section: Route Alternatives Card (Shown both when viewing routes and during editing mode) */}
       {hasRoutes && (
-        <div className="p-4 mt-auto shrink-0">
+        <div className="p-4 mt-auto shrink-0 hidden sm:block">
           <div className="relative h-38 overflow-hidden rounded-sm bg-background/60 p-4 shadow-xs">
             <div className="relative z-10 space-y-1 pr-24">
               <h3 className="text-sm font-medium text-foreground">

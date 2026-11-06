@@ -85,27 +85,30 @@ export function ForecastSlider({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2.5 rounded-2xl border border-border/80 bg-card/95 p-3.5 shadow-2xl backdrop-blur-md select-none text-foreground w-[480px] max-w-[calc(100vw-32px)] transition-all",
+        "flex flex-col gap-2 rounded-2xl border border-border/80 bg-card/95 p-2.5 sm:p-3.5 shadow-2xl backdrop-blur-md select-none text-foreground w-[480px] max-w-[calc(100vw-24px)] transition-all",
         className,
       )}
     >
       {/* Top Header Row: Status, Time Readout & Route Info */}
       <div className="flex items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           <Badge
             variant="outline"
-            className="font-mono text-[11px] font-bold bg-secondary/80 text-foreground shrink-0 border-border"
+            className="font-mono text-[10px] sm:text-[11px] font-bold bg-secondary/80 text-foreground shrink-0 border-border px-1.5 py-0.5"
           >
             {formatHourOffset(currentHour)}
           </Badge>
-          <span className="font-semibold text-foreground truncate">
+          <span className="font-semibold text-foreground truncate text-[11px] sm:text-xs">
             {formatOffsetDateTime(departureTime, currentHour)}
           </span>
         </div>
 
         {selectedRoute && (
-          <div className="flex items-center gap-1.5 shrink-0 text-muted-foreground text-[11px]">
-            <span className="font-medium text-foreground truncate max-w-[160px]" title={selectedRoute.name}>
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 text-muted-foreground text-[10px] sm:text-[11px]">
+            <span
+              className="font-medium text-foreground truncate max-w-[85px] sm:max-w-[160px]"
+              title={selectedRoute.name}
+            >
               {selectedRoute.name}
             </span>
             <span className="text-muted-foreground/60">•</span>
@@ -194,28 +197,28 @@ export function ForecastSlider({
         </div>
 
         {/* Compact Weather Risk Legend */}
-        <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground shrink-0">
-          <span className="hidden sm:inline">Risk:</span>
-          <div className="flex items-center gap-1">
-            <span className="flex items-center gap-1">
+        <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-medium text-muted-foreground shrink-0">
+          <span className="hidden md:inline">Risk:</span>
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <span className="flex items-center gap-0.5">
               <span className="size-2 rounded-full bg-emerald-500" />
-              <span>Low</span>
+              <span className="hidden sm:inline">Low</span>
             </span>
-            <span className="flex items-center gap-1 ml-1">
+            <span className="flex items-center gap-0.5">
               <span className="size-2 rounded-full bg-amber-500" />
-              <span>Mod</span>
+              <span className="hidden sm:inline">Mod</span>
             </span>
-            <span className="flex items-center gap-1 ml-1">
+            <span className="flex items-center gap-0.5">
               <span className="size-2 rounded-full bg-orange-500" />
-              <span>High</span>
+              <span className="hidden sm:inline">High</span>
             </span>
-            <span className="flex items-center gap-1 ml-1">
+            <span className="flex items-center gap-0.5">
               <span className="size-2 rounded-full bg-red-500" />
-              <span>Sev</span>
+              <span className="hidden sm:inline">Sev</span>
             </span>
-            <span className="flex items-center gap-1 ml-1">
+            <span className="flex items-center gap-0.5">
               <span className="size-2 rounded-full bg-[#991b1b]" />
-              <span>No-Trv</span>
+              <span className="hidden sm:inline">No-Trv</span>
             </span>
           </div>
         </div>
