@@ -6,7 +6,7 @@ The core idea is straightforward: a 1,000-mile cross-country haul takes 15+ hour
 
 ---
 
-## Live Links & Deliverables
+## Urls
 
 - **Hosted Web Application**: [https://weather-aware-trucking.vercel.app](https://weather-aware-trucking.vercel.app)
 - **Walkthrough Video**: [Watch Loom Walkthrough](https://www.loom.com/share/464d98adf0934a2bb42ecaa02b6b32c2)
@@ -30,7 +30,7 @@ The core idea is straightforward: a 1,000-mile cross-country haul takes 15+ hour
 
 ---
 
-## How It Works: The Core Pipeline (Have some formulaes 😉 but makes sense!)
+## How It Works (P.S. this has formulaes but u can understand it easily)
 
 Here is how the backend pipeline transforms raw origin/destination coordinates into an actionable, weather-scored route recommendation:
 
@@ -160,7 +160,7 @@ Here are the key technical decisions I made while building this system and why I
 
 ### 1. Why I used Mapbox segment annotations instead of Haversine formulas
 
-Calculating straight-line (Haversine/Vincenty) distances between polyline coordinates cuts highway corners, ignores elevation profiles, and accumulates noticeable mileage drift over a 1,000-mile trip. By asking Mapbox for `annotations=distance` directly, I get the exact road-network segment measurements from their underlying routing graph. This ensures the odometer perfectly matches highway driving miles.
+(Mapbox provides accurate distance between points as annotations hence used that directly)Calculating straight-line (Haversine) distances between polyline coordinates cuts highway corners, ignores elevation profiles, and accumulates noticeable mileage drift over a 1,000-mile trip. By asking Mapbox for `annotations=distance` directly, I get the exact road-network segment measurements from their underlying routing graph. This ensures the odometer perfectly matches highway driving miles.
 
 ### 2. Why I went with adaptive distance-tiered sampling
 
