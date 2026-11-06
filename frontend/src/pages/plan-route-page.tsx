@@ -2,6 +2,7 @@ import { useState } from "react";
 import { RoutePlannerPanel } from "../components/route-planner-panel";
 import { RouteMap } from "../components/route-map";
 import { ForecastSlider } from "../components/forecast-slider";
+import { RiskLegend } from "../components/risk-legend";
 import { useRoutePlanQuery } from "../hooks/queries/use-route-plan-query";
 import { useIsMobile } from "../hooks/use-mobile";
 import type { LocationCoordinate, PlanRouteRequest } from "../api/types";
@@ -36,9 +37,6 @@ export function PlanRoutePage(): React.JSX.Element {
     selectedRouteId && routes?.some((r) => r.id === selectedRouteId)
       ? selectedRouteId
       : (routePlanQuery.data?.recommended_route_id ?? routes?.[0]?.id ?? null);
-
-  const activeRoute =
-    routes?.find((r) => r.id === activeRouteId) ?? routes?.[0] ?? null;
 
   const maxForecastHours = corridorHeatmap?.hourly_intensity
     ? Math.max(
@@ -134,7 +132,9 @@ export function PlanRoutePage(): React.JSX.Element {
           className="absolute top-4 left-4 z-30 flex items-center gap-2 rounded-full border border-border/80 bg-card/95 px-3.5 py-2 text-xs font-semibold text-foreground shadow-xl backdrop-blur-md transition-all hover:bg-card hover:scale-105 active:scale-95 cursor-pointer"
         >
           <PanelLeft className="size-4 text-primary" />
-          <span>{hasRoutes ? `Routes (${routes?.length ?? 0})` : "Plan Route"}</span>
+          <span>
+            {hasRoutes ? `Routes (${routes?.length ?? 0})` : "Plan Route"}
+          </span>
         </button>
       )}
 
@@ -145,9 +145,15 @@ export function PlanRoutePage(): React.JSX.Element {
             currentHour={forecastHour}
             maxHours={maxForecastHours}
             departureTime={routeRequest?.departure_time}
-            selectedRoute={activeRoute}
             onHourChange={setForecastHour}
           />
+        </div>
+      )}
+
+      {/* Weather Risk Legend (Separate floating map card, like in real maps) */}
+      {hasRoutes && (!isMobile || isPanelCollapsed) && (
+        <div className="absolute bottom-28 sm:bottom-12 right-3 sm:right-4 z-20 pointer-events-auto">
+          <RiskLegend defaultCollapsed={isMobile} />
         </div>
       )}
 

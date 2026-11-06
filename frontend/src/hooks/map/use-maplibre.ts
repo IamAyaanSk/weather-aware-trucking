@@ -16,7 +16,9 @@ const OFM_LIGHT_URL = "https://tiles.openfreemap.org/styles/positron";
 let cachedDarkStyle: StyleSpecification | null = null;
 let cachedLightStyle: StyleSpecification | null = null;
 
-async function loadThemedStyle(isDark: boolean): Promise<StyleSpecification | string> {
+async function loadThemedStyle(
+  isDark: boolean,
+): Promise<StyleSpecification | string> {
   if (isDark) {
     if (cachedDarkStyle) return cachedDarkStyle;
     try {
@@ -87,7 +89,7 @@ export function useMaplibre({
 
       mapInstance.addControl(
         new NavigationControl({ showCompass: true, visualizePitch: true }),
-        "bottom-right",
+        "top-right",
       );
       mapInstance.addControl(new FullscreenControl(), "top-right");
 

@@ -133,9 +133,6 @@ export function RoutePlannerPanel({
           <h1 className="text-sm font-semibold tracking-tight text-foreground">
             Weather aware route planning
           </h1>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Corridor analysis & risk assessment
-          </p>
         </div>
         {onCloseMobile && (
           <Button

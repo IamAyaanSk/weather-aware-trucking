@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { formatDistance, formatHourOffset } from "../lib/format";
-import type { RouteItem } from "../api/types";
 import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "cn";
 
@@ -10,7 +7,6 @@ interface ForecastSliderProps {
   currentHour: number;
   maxHours?: number;
   departureTime?: string;
-  selectedRoute?: RouteItem | null;
   onHourChange: (hour: number) => void;
   className?: string;
 }
@@ -24,6 +20,8 @@ function formatOffsetDateTime(departureIso?: string, offsetHours: number = 0): s
     const targetDate = new Date(date.getTime() + offsetHours * 3600 * 1000);
     return new Intl.DateTimeFormat(undefined, {
       weekday: "short",
+      month: "short",
+      day: "numeric",
       hour: "numeric",
       minute: "2-digit",
     }).format(targetDate);
@@ -36,14 +34,13 @@ export function ForecastSlider({
   currentHour,
   maxHours = 48,
   departureTime,
-  selectedRoute,
   onHourChange,
   className,
 }: ForecastSliderProps): React.JSX.Element {
   const [isPlaying, setIsPlaying] = useState(false);
   const playIntervalRef = useRef<number | null>(null);
 
-  // Playback timer (hourly step every 800ms)
+  // Playback timer (hourly step every 850ms)
   useEffect(() => {
     if (!isPlaying) {
       if (playIntervalRef.current) {
@@ -81,77 +78,27 @@ export function ForecastSlider({
   };
 
   const progressPercent = maxHours > 0 ? (currentHour / maxHours) * 100 : 0;
+  const midHour = Math.round(maxHours / 2);
 
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 rounded-2xl border border-border/80 bg-card/95 p-2.5 sm:p-3.5 shadow-2xl backdrop-blur-md select-none text-foreground w-[480px] max-w-[calc(100vw-24px)] transition-all",
+        "flex flex-col gap-2 rounded-2xl border border-border/70 bg-card/90 px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-2xl backdrop-blur-xl select-none text-foreground w-[360px] sm:w-[410px] max-w-[calc(100vw-24px)] transition-all",
         className,
       )}
     >
-      {/* Top Header Row: Status, Time Readout & Route Info */}
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <Badge
-            variant="outline"
-            className="font-mono text-[10px] sm:text-[11px] font-bold bg-secondary/80 text-foreground shrink-0 border-border px-1.5 py-0.5"
-          >
-            {formatHourOffset(currentHour)}
-          </Badge>
-          <span className="font-semibold text-foreground truncate text-[11px] sm:text-xs">
-            {formatOffsetDateTime(departureTime, currentHour)}
-          </span>
-        </div>
-
-        {selectedRoute && (
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 text-muted-foreground text-[10px] sm:text-[11px]">
-            <span
-              className="font-medium text-foreground truncate max-w-[85px] sm:max-w-[160px]"
-              title={selectedRoute.name}
-            >
-              {selectedRoute.name}
-            </span>
-            <span className="text-muted-foreground/60">•</span>
-            <span className="font-mono font-medium">
-              {formatDistance(selectedRoute.total_distance_miles)}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Main Track Slider */}
-      <div className="relative flex items-center w-full my-1">
-        <input
-          type="range"
-          min={0}
-          max={maxHours}
-          step={1}
-          value={currentHour}
-          onChange={(e) => {
-            setIsPlaying(false);
-            onHourChange(parseInt(e.target.value, 10));
-          }}
-          className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          aria-label="Forecast hour slider"
-        />
-        {/* Visual progress track fill */}
-        <div
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-2 bg-primary rounded-lg pointer-events-none transition-all duration-75"
-          style={{ width: `${progressPercent}%` }}
-        />
-      </div>
-
-      {/* Bottom Controls Row: Play/Pause, Steps, & Legend */}
-      <div className="flex items-center justify-between gap-3 pt-0.5">
-        {/* Playback Controls */}
-        <div className="flex items-center gap-1.5 shrink-0">
+      {/* Top Row: Playback Controls & Prominent Hour Display */}
+      <div className="flex items-center justify-between gap-3">
+        {/* Playback Controls (Unfilled buttons) */}
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={handleReset}
+            disabled={currentHour === 0}
             title="Reset to departure (0h)"
-            className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
+            className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 disabled:opacity-25 cursor-pointer"
           >
             <RotateCcw className="size-3.5" />
           </Button>
@@ -162,24 +109,24 @@ export function ForecastSlider({
             size="icon"
             onClick={handleStepBack}
             disabled={currentHour <= 0}
-            title="Step backward 1 hour"
-            className="size-7 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-40"
+            title="Step back 1 hour"
+            className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 disabled:opacity-25 cursor-pointer"
           >
             <ChevronLeft className="size-4" />
           </Button>
 
           <Button
             type="button"
-            variant="default"
+            variant="ghost"
             size="icon"
             onClick={() => setIsPlaying((prev) => !prev)}
-            title={isPlaying ? "Pause timeline" : "Play timeline (+1h steps)"}
-            className="size-7 rounded-lg bg-primary text-primary-foreground shadow hover:bg-primary/90"
+            title={isPlaying ? "Pause timeline" : "Play corridor forecast"}
+            className="size-7 sm:size-8 rounded-md text-foreground hover:text-primary hover:bg-muted/80 transition-transform active:scale-95 cursor-pointer"
           >
             {isPlaying ? (
-              <Pause className="size-3.5 fill-current" />
+              <Pause className="size-4" />
             ) : (
-              <Play className="size-3.5 fill-current ml-0.5" />
+              <Play className="size-4 ml-0.5" />
             )}
           </Button>
 
@@ -190,37 +137,51 @@ export function ForecastSlider({
             onClick={handleStepForward}
             disabled={currentHour >= maxHours}
             title="Step forward 1 hour"
-            className="size-7 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-40"
+            className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/70 disabled:opacity-25 cursor-pointer"
           >
             <ChevronRight className="size-4" />
           </Button>
         </div>
 
-        {/* Compact Weather Risk Legend */}
-        <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-medium text-muted-foreground shrink-0">
-          <span className="hidden md:inline">Risk:</span>
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            <span className="flex items-center gap-0.5">
-              <span className="size-2 rounded-full bg-emerald-500" />
-              <span className="hidden sm:inline">Low</span>
-            </span>
-            <span className="flex items-center gap-0.5">
-              <span className="size-2 rounded-full bg-amber-500" />
-              <span className="hidden sm:inline">Mod</span>
-            </span>
-            <span className="flex items-center gap-0.5">
-              <span className="size-2 rounded-full bg-orange-500" />
-              <span className="hidden sm:inline">High</span>
-            </span>
-            <span className="flex items-center gap-0.5">
-              <span className="size-2 rounded-full bg-red-500" />
-              <span className="hidden sm:inline">Sev</span>
-            </span>
-            <span className="flex items-center gap-0.5">
-              <span className="size-2 rounded-full bg-[#991b1b]" />
-              <span className="hidden sm:inline">No-Trv</span>
-            </span>
-          </div>
+        {/* Prominent Hour Value & Date Readout (No badge, prominent bold typography) */}
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="font-mono text-base sm:text-lg font-bold tracking-tight text-foreground select-none">
+            {currentHour === 0 ? "0h" : `+${currentHour}h`}
+          </span>
+          <span className="text-xs font-medium text-muted-foreground truncate">
+            {formatOffsetDateTime(departureTime, currentHour)}
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom Row: Scrubber Track with Range Markers */}
+      <div className="flex flex-col gap-1">
+        <div className="relative flex items-center w-full">
+          <input
+            type="range"
+            min={0}
+            max={maxHours}
+            step={1}
+            value={currentHour}
+            onChange={(e) => {
+              setIsPlaying(false);
+              onHourChange(parseInt(e.target.value, 10));
+            }}
+            className="w-full h-1.5 bg-secondary/80 rounded-full appearance-none cursor-pointer accent-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            aria-label="Forecast hour slider"
+          />
+          {/* Visual progress fill */}
+          <div
+            className="absolute left-0 top-1/2 -translate-y-1/2 h-1.5 bg-primary rounded-full pointer-events-none transition-all duration-75"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+
+        {/* Timeline markers */}
+        <div className="flex items-center justify-between text-[10px] font-medium text-muted-foreground/70 px-0.5 font-mono">
+          <span>0h</span>
+          <span>+{midHour}h</span>
+          <span>+{maxHours}h</span>
         </div>
       </div>
     </div>
