@@ -15,7 +15,7 @@ The core idea is straightforward: a 1,000-mile cross-country haul takes 15+ hour
 
 ## Key Features
 
-- **Multi-Route Corridor Planning**: I query the Mapbox Directions API (`driving-traffic` profile) with commercial vehicle approximations and live/historical traffic data to evaluate up to 3 viable route options.
+- **Multi-Route Corridor Planning**: I query the Mapbox Directions API (`driving-traffic` profile) (I also implemented tomtom but it is comparatively slower than Mapbox) with commercial vehicle approximations and live/historical traffic data to evaluate up to 3 viable route options.
 - **Dynamic Checkpoint Sampling**: Rather than using a rigid sampling interval everywhere, I adjust checkpoint frequency based on total corridor distance:
   - `Distance <= 20 mi`: Checkpoints at Origin, Midpoint, and Destination (`distance / 2`).
   - `20 mi < Distance <= 100 mi`: Checkpoint every **10 miles**.
