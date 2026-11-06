@@ -110,7 +110,15 @@ export function RoutePlannerPanel({
     });
   };
 
-  const accordionValue = selectedRouteId ? [selectedRouteId] : [];
+  const [openAccordionIds, setOpenAccordionIds] = useState<string[]>(() =>
+    routes ? routes.map((r) => r.id) : [],
+  );
+  const [prevRoutes, setPrevRoutes] = useState<RouteItem[] | undefined>(routes);
+
+  if (routes !== prevRoutes) {
+    setPrevRoutes(routes);
+    setOpenAccordionIds(routes ? routes.map((r) => r.id) : []);
+  }
 
   return (
     <aside
@@ -224,12 +232,11 @@ export function RoutePlannerPanel({
               </span>
 
               <Accordion
-                value={accordionValue}
+                multiple
+                value={openAccordionIds}
                 onValueChange={(val) => {
-                  const newId = Array.isArray(val) ? val[0] : val;
-                  if (newId && typeof newId === "string" && onSelectRoute) {
-                    onSelectRoute(newId);
-                  }
+                  const newIds = Array.isArray(val) ? val : [val];
+                  setOpenAccordionIds(newIds.filter(Boolean));
                 }}
               >
                 {routes?.map((route, index) => {
@@ -239,12 +246,12 @@ export function RoutePlannerPanel({
                     <AccordionItem
                       key={route.id}
                       value={route.id}
-                      className="transition-colors not-last:border-b not-last:border-border not-last:border-b-muted-foreground"
+                      className="transition-colors border-b-0! bg-muted/70 py-2 mb-3 rounded-xl"
                     >
                       <AccordionTrigger
                         onClick={() => onSelectRoute?.(route.id)}
                         className={cn(
-                          "hover:no-underline transition-colors text-left w-full px-0.5 py-3",
+                          "hover:no-underline transition-colors text-left w-full px-4 py-3 rounded-none",
                           isSelected && "text-foreground font-semibold",
                         )}
                       >
@@ -287,7 +294,7 @@ export function RoutePlannerPanel({
                         </div>
                       </AccordionTrigger>
 
-                      <AccordionContent className="pb-3 text-xs">
+                      <AccordionContent className="pb-3 text-xs border-t border-t-primary-foreground/10 pt-2 px-4">
                         <div className="flex flex-col gap-5 pt-2">
                           {/* Metrics Summary Grid */}
 
