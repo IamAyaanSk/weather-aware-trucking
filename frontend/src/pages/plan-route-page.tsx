@@ -9,20 +9,18 @@ import { cn } from "cn";
 export function PlanRoutePage(): React.JSX.Element {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [origin, setOrigin] = useState<LocationCoordinate | null>(null);
-  const [destination, setDestination] = useState<LocationCoordinate | null>(
-    null,
-  );
-  const [pickingTarget, setPickingTarget] = useState<
-    "origin" | "destination" | null
-  >(null);
-  const [routeRequest, setRouteRequest] = useState<PlanRouteRequest | null>(
-    null,
-  );
+  const [destination, setDestination] = useState<LocationCoordinate | null>(null);
+  const [pickingTarget, setPickingTarget] = useState<"origin" | "destination" | null>(null);
+  const [routeRequest, setRouteRequest] = useState<PlanRouteRequest | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [isEditingForm, setIsEditingForm] = useState(false);
 
   const routePlanQuery = useRoutePlanQuery(routeRequest);
 
   const routes = routePlanQuery.data?.routes;
+  const hasRoutes = Boolean(routes && routes.length > 0);
+  const isEditing = !hasRoutes || isEditingForm;
+
   const activeRouteId =
     selectedRouteId && routes?.some((r) => r.id === selectedRouteId)
       ? selectedRouteId
@@ -32,10 +30,7 @@ export function PlanRoutePage(): React.JSX.Element {
     setPickingTarget((prev) => (prev === target ? null : target));
   };
 
-  const handlePickLocation = (
-    target: "origin" | "destination",
-    location: LocationCoordinate,
-  ) => {
+  const handlePickLocation = (target: "origin" | "destination", location: LocationCoordinate) => {
     if (target === "origin") {
       setOrigin(location);
     } else {
@@ -50,6 +45,7 @@ export function PlanRoutePage(): React.JSX.Element {
     loadWeightLbs: number;
     departureTime: string;
   }) => {
+    setIsEditingForm(false);
     const inputDate = new Date(params.departureTime);
     const now = new Date();
 
@@ -78,6 +74,7 @@ export function PlanRoutePage(): React.JSX.Element {
           routes={routes}
           selectedRouteId={activeRouteId}
           onSelectRoute={setSelectedRouteId}
+          isEditing={isEditing}
         />
       </div>
 
@@ -99,6 +96,8 @@ export function PlanRoutePage(): React.JSX.Element {
           routes={routes}
           selectedRouteId={activeRouteId}
           onSelectRoute={setSelectedRouteId}
+          isEditingForm={isEditingForm}
+          onToggleEditing={setIsEditingForm}
           error={routePlanQuery.error}
         />
 
@@ -106,15 +105,9 @@ export function PlanRoutePage(): React.JSX.Element {
           type="button"
           onClick={() => setIsPanelCollapsed((prev) => !prev)}
           className="absolute -right-5 top-1/2 -translate-y-1/2 z-30 flex h-14 w-5 items-center justify-center rounded-r-lg border-y border-r border-border/80 bg-card/95 text-muted-foreground shadow-md backdrop-blur-md transition-colors hover:bg-card hover:text-foreground cursor-pointer select-none"
-          title={
-            isPanelCollapsed
-              ? "Expand route planning panel"
-              : "Collapse route planning panel"
-          }
+          title={isPanelCollapsed ? "Expand route planning panel" : "Collapse route planning panel"}
           aria-label={
-            isPanelCollapsed
-              ? "Expand route planning panel"
-              : "Collapse route planning panel"
+            isPanelCollapsed ? "Expand route planning panel" : "Collapse route planning panel"
           }
         >
           {isPanelCollapsed ? (

@@ -18,13 +18,7 @@ export function useRoutePlanQuery(
       }
       return planRoute(params);
     },
-    enabled: Boolean(
-      params &&
-        params.origin &&
-        params.destination &&
-        params.departure_time,
-    ),
+    enabled: Boolean(params && params.origin && params.destination && params.departure_time),
     staleTime: 1000 * 60 * 5,
   });
 }
-

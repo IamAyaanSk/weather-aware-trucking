@@ -4,8 +4,9 @@ import { useDraggableMarker } from "../hooks/map/use-draggable-marker";
 import { useMapPicker } from "../hooks/map/use-map-picker";
 import { useMapCamera } from "../hooks/map/use-map-camera";
 import { useRouteLines } from "../hooks/map/use-route-lines";
+import { useRouteCheckpoints } from "../hooks/map/use-route-checkpoints";
 import { createOriginMarkerElement, createDestinationMarkerElement } from "../lib/map-markers";
-import type { LocationCoordinate, RouteItem } from "../api/types";
+import type { Checkpoint, LocationCoordinate, RouteItem } from "../api/types";
 import { cn } from "cn";
 
 interface RouteMapProps {
@@ -23,6 +24,8 @@ interface RouteMapProps {
   routes?: RouteItem[];
   selectedRouteId?: string | null;
   onSelectRoute?: (routeId: string) => void;
+  onSelectCheckpoint?: (checkpoint: Checkpoint) => void;
+  isEditing?: boolean;
 }
 
 export function RouteMap({
@@ -40,6 +43,8 @@ export function RouteMap({
   routes,
   selectedRouteId,
   onSelectRoute,
+  onSelectCheckpoint,
+  isEditing = true,
 }: RouteMapProps): React.JSX.Element {
   const { containerRef, map } = useMaplibre({ initialCenter, initialZoom });
   const skipCameraAnimationRef = useRef(false);
@@ -48,24 +53,24 @@ export function RouteMap({
     skipCameraAnimationRef.current = true;
   }, []);
 
-  // Origin Marker
+  // Origin Marker - Draggable only during the editing phase
   useDraggableMarker({
     map,
     location: origin,
     onChange: onOriginChange,
     createMarkerElement: createOriginMarkerElement,
     onDragStateChange: markMapInteraction,
-    draggable: !isPlanning,
+    draggable: isEditing && !isPlanning,
   });
 
-  // Destination Marker
+  // Destination Marker - Draggable only during the editing phase
   useDraggableMarker({
     map,
     location: destination,
     onChange: onDestinationChange,
     createMarkerElement: createDestinationMarkerElement,
     onDragStateChange: markMapInteraction,
-    draggable: !isPlanning,
+    draggable: isEditing && !isPlanning,
   });
 
   // Map Click Picker Mode
@@ -82,6 +87,16 @@ export function RouteMap({
     routes,
     selectedRouteId,
     onSelectRoute,
+  });
+
+  // Active Route Checkpoints Layer with interactive risk-colored circles and hover card
+  const activeRoute = routes?.find((r) => r.id === selectedRouteId) ?? routes?.[0] ?? null;
+
+  useRouteCheckpoints({
+    map,
+    checkpoints: activeRoute?.checkpoints,
+    routeId: activeRoute?.id,
+    onSelectCheckpoint,
   });
 
   // Camera Framing & Bounds (only active when no routes drawn, as useRouteLines handles route bounds)

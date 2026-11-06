@@ -13,6 +13,7 @@ interface UseRouteLinesOptions {
 const SOURCE_ID = "routes-source";
 const CASING_LAYER_ID = "routes-casing";
 const LINE_LAYER_ID = "routes-line";
+const HIT_TARGET_LAYER_ID = "routes-hit-target";
 
 interface RouteFeature {
   type: "Feature";
@@ -46,6 +47,7 @@ export function useRouteLines({
 
     const setupLayers = () => {
       if (!routes || routes.length === 0) {
+        if (map.getLayer(HIT_TARGET_LAYER_ID)) map.removeLayer(HIT_TARGET_LAYER_ID);
         if (map.getLayer(LINE_LAYER_ID)) map.removeLayer(LINE_LAYER_ID);
         if (map.getLayer(CASING_LAYER_ID)) map.removeLayer(CASING_LAYER_ID);
         if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
@@ -83,11 +85,17 @@ export function useRouteLines({
       const existingSource = map.getSource(SOURCE_ID) as GeoJSONSource | undefined;
 
       if (existingSource) {
-        existingSource.setData(featureCollection as unknown as Parameters<GeoJSONSource["setData"]>[0]);
+        existingSource.setData(
+          featureCollection as unknown as Parameters<GeoJSONSource["setData"]>[0],
+        );
       } else {
         map.addSource(SOURCE_ID, {
           type: "geojson",
-          data: featureCollection as unknown as Parameters<Map["addSource"]>[1] extends { data: infer D } ? D : never,
+          data: featureCollection as unknown as Parameters<Map["addSource"]>[1] extends {
+            data: infer D;
+          }
+            ? D
+            : never,
         });
 
         // Dark casing for outline contrast
@@ -101,12 +109,7 @@ export function useRouteLines({
           },
           paint: {
             "line-color": "#020617",
-            "line-width": [
-              "case",
-              ["==", ["get", "id"], selectedRouteId ?? ""],
-              8,
-              5,
-            ],
+            "line-width": ["case", ["==", ["get", "id"], selectedRouteId ?? ""], 8, 5],
             "line-opacity": 0.7,
           },
         });
@@ -127,20 +130,31 @@ export function useRouteLines({
               "#3b82f6",
               "#64748b",
             ],
-            "line-width": [
-              "case",
-              ["==", ["get", "id"], selectedRouteId ?? ""],
-              5,
-              3.5,
-            ],
-            "line-opacity": [
-              "case",
-              ["==", ["get", "id"], selectedRouteId ?? ""],
-              1,
-              0.55,
-            ],
+            "line-width": ["case", ["==", ["get", "id"], selectedRouteId ?? ""], 5, 3.5],
+            "line-opacity": ["case", ["==", ["get", "id"], selectedRouteId ?? ""], 1, 0.55],
           },
         });
+
+        // Invisible wide hit target for easy clicking and hover switching
+        map.addLayer({
+          id: HIT_TARGET_LAYER_ID,
+          type: "line",
+          source: SOURCE_ID,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#000000",
+            "line-width": 26, // Generous 26px clickable corridor
+            "line-opacity": 0.001, // Invisible visually, but fully responsive to pointer and clicks
+          },
+        });
+      }
+
+      // Ensure hit target layer stays on top of route line
+      if (map.getLayer(HIT_TARGET_LAYER_ID)) {
+        map.moveLayer(HIT_TARGET_LAYER_ID);
       }
 
       // Update paint properties on layer if already exists
@@ -182,14 +196,18 @@ export function useRouteLines({
     }
   }, [map, routes, selectedRouteId]);
 
-  // Click on route lines to select
+  // Click on route lines to select (via wide hit-target layer)
   useEffect(() => {
     if (!map || !routes || routes.length === 0) return;
 
     const handleLineClick = (e: { features?: MapGeoJSONFeature[] }) => {
-      const feature = e.features?.[0];
-      if (!feature?.properties) return;
-      const id = String(feature.properties.id);
+      if (!e.features || e.features.length === 0) return;
+      // If click hit multiple overlapping routes, prefer switching to the alternative route
+      const alternativeFeature = e.features.find(
+        (f) => String(f.properties?.id) !== selectedRouteId,
+      );
+      const chosenFeature = alternativeFeature ?? e.features[0];
+      const id = String(chosenFeature.properties?.id);
       if (id && onSelectRoute) {
         onSelectRoute(id);
       }
@@ -203,16 +221,16 @@ export function useRouteLines({
       map.getCanvas().style.cursor = "";
     };
 
-    map.on("click", LINE_LAYER_ID, handleLineClick);
-    map.on("mouseenter", LINE_LAYER_ID, handleMouseEnter);
-    map.on("mouseleave", LINE_LAYER_ID, handleMouseLeave);
+    map.on("click", HIT_TARGET_LAYER_ID, handleLineClick);
+    map.on("mouseenter", HIT_TARGET_LAYER_ID, handleMouseEnter);
+    map.on("mouseleave", HIT_TARGET_LAYER_ID, handleMouseLeave);
 
     return () => {
-      map.off("click", LINE_LAYER_ID, handleLineClick);
-      map.off("mouseenter", LINE_LAYER_ID, handleMouseEnter);
-      map.off("mouseleave", LINE_LAYER_ID, handleMouseLeave);
+      map.off("click", HIT_TARGET_LAYER_ID, handleLineClick);
+      map.off("mouseenter", HIT_TARGET_LAYER_ID, handleMouseEnter);
+      map.off("mouseleave", HIT_TARGET_LAYER_ID, handleMouseLeave);
     };
-  }, [map, routes, onSelectRoute]);
+  }, [map, routes, selectedRouteId, onSelectRoute]);
 
   // Fit camera bounds across all routes when routes load or change
   useEffect(() => {

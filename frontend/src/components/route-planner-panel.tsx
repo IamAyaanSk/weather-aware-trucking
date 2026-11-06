@@ -33,6 +33,8 @@ interface RoutePlannerPanelProps {
   routes?: RouteItem[];
   selectedRouteId?: string | null;
   onSelectRoute?: (routeId: string) => void;
+  isEditingForm?: boolean;
+  onToggleEditing?: (isEditing: boolean) => void;
   error?: Error | null;
 }
 
@@ -59,13 +61,16 @@ export function RoutePlannerPanel({
   routes,
   selectedRouteId,
   onSelectRoute,
+  isEditingForm: isEditingProp,
+  onToggleEditing,
   error = null,
 }: RoutePlannerPanelProps): React.JSX.Element {
   const [loadWeightLbs, setLoadWeightLbs] = useState<number>(35000);
-  const [departureTime, setDepartureTime] = useState<string>(() =>
-    formatLocalDateTime(new Date()),
-  );
-  const [isEditingForm, setIsEditingForm] = useState(false);
+  const [departureTime, setDepartureTime] = useState<string>(() => formatLocalDateTime(new Date()));
+  const [internalEditingForm, setInternalEditingForm] = useState(false);
+
+  const isEditingForm = isEditingProp !== undefined ? isEditingProp : internalEditingForm;
+  const setIsEditingForm = onToggleEditing ?? setInternalEditingForm;
 
   const hasRoutes = Boolean(routes && routes.length > 0);
 
@@ -156,10 +161,7 @@ export function RoutePlannerPanel({
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="readonly-destination-input"
-                    className="sr-only"
-                  >
+                  <label htmlFor="readonly-destination-input" className="sr-only">
                     Destination
                   </label>
                   <Input
@@ -232,11 +234,29 @@ export function RoutePlannerPanel({
                             {formatDuration(route.total_duration_hours)}
                           </span>
 
-                          {route.is_recommended && (
-                            <Badge className="mt-1 text-xs" variant="default">
-                              Recommended
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                            {route.is_recommended && (
+                              <Badge className="text-xs" variant="default">
+                                Recommended
+                              </Badge>
+                            )}
+                            {/* {hasNoTravel && (
+                              <Badge
+                                className="text-[11px] bg-rose-950/80 text-rose-300 border-rose-800"
+                                variant="destructive"
+                              >
+                                No Travel
+                              </Badge>
+                            )}
+                            {!hasNoTravel && hasSevere && (
+                              <Badge
+                                className="text-[11px] bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                                variant="outline"
+                              >
+                                Severe Risk
+                              </Badge>
+                            )} */}
+                          </div>
                         </div>
                       </AccordionTrigger>
 
@@ -286,35 +306,23 @@ export function RoutePlannerPanel({
                             <ul className="flex flex-row justify-between gap-3.5 flex-wrap">
                               <li className="flex gap-1.5 text-green-300/80">
                                 <span>Low:</span>{" "}
-                                <span>
-                                  {formatDistance(route.metrics.low_miles)}
-                                </span>
+                                <span>{formatDistance(route.metrics.low_miles)}</span>
                               </li>
                               <li className="flex gap-1.5 text-yellow-300/80">
                                 <span>Moderate:</span>{" "}
-                                <span>
-                                  {formatDistance(route.metrics.moderate_miles)}
-                                </span>
+                                <span>{formatDistance(route.metrics.moderate_miles)}</span>
                               </li>
                               <li className="flex gap-1.5 text-orange-300/80">
                                 <span>High:</span>{" "}
-                                <span>
-                                  {formatDistance(route.metrics.high_miles)}
-                                </span>
+                                <span>{formatDistance(route.metrics.high_miles)}</span>
                               </li>
                               <li className="flex gap-1.5 text-red-300/80">
                                 <span>Severe:</span>{" "}
-                                <span>
-                                  {formatDistance(route.metrics.severe_miles)}
-                                </span>
+                                <span>{formatDistance(route.metrics.severe_miles)}</span>
                               </li>
                               <li className="flex gap-1.5 text-amber-600/80">
                                 <span>No-Travel:</span>{" "}
-                                <span>
-                                  {formatDistance(
-                                    route.metrics.no_travel_miles,
-                                  )}
-                                </span>
+                                <span>{formatDistance(route.metrics.no_travel_miles)}</span>
                               </li>
                             </ul>
                           </div>
@@ -325,11 +333,7 @@ export function RoutePlannerPanel({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                console.log(
-                                  "Checkpoints for route",
-                                  route.id,
-                                  route.checkpoints,
-                                );
+                                console.log("Checkpoints for route", route.id, route.checkpoints);
                               }}
                               className="text-[11px] text-primary hover:underline font-medium cursor-pointer"
                             >
@@ -383,9 +387,7 @@ export function RoutePlannerPanel({
                     iconType="origin"
                     isPickingOnMap={pickingTarget === "origin"}
                     onTogglePickOnMap={
-                      onTogglePickOnMap
-                        ? () => onTogglePickOnMap("origin")
-                        : undefined
+                      onTogglePickOnMap ? () => onTogglePickOnMap("origin") : undefined
                     }
                   />
                 </div>
@@ -403,9 +405,7 @@ export function RoutePlannerPanel({
                     iconType="destination"
                     isPickingOnMap={pickingTarget === "destination"}
                     onTogglePickOnMap={
-                      onTogglePickOnMap
-                        ? () => onTogglePickOnMap("destination")
-                        : undefined
+                      onTogglePickOnMap ? () => onTogglePickOnMap("destination") : undefined
                     }
                   />
                 </div>
@@ -445,9 +445,7 @@ export function RoutePlannerPanel({
                   step={500}
                   value={loadWeightLbs}
                   disabled={isPending}
-                  onChange={(e) =>
-                    setLoadWeightLbs(Math.max(0, Number(e.target.value) || 0))
-                  }
+                  onChange={(e) => setLoadWeightLbs(Math.max(0, Number(e.target.value) || 0))}
                   className="h-10 pr-12 text-sm bg-background/70 border-input rounded-lg focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
@@ -487,8 +485,7 @@ export function RoutePlannerPanel({
             {/* Error Feedback */}
             {error && !isPending && (
               <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-2.5">
-                {error.message ||
-                  "Could not retrieve route plan. Please check inputs and retry."}
+                {error.message || "Could not retrieve route plan. Please check inputs and retry."}
               </p>
             )}
 
@@ -532,12 +529,10 @@ export function RoutePlannerPanel({
         <div className="p-4 mt-auto shrink-0">
           <div className="relative h-38 overflow-hidden rounded-sm bg-background/60 p-4 shadow-xs">
             <div className="relative z-10 space-y-1 pr-24">
-              <h3 className="text-sm font-medium text-foreground">
-                Route insights
-              </h3>
+              <h3 className="text-sm font-medium text-foreground">Route insights</h3>
               <p className="text-xs text-muted-foreground/70">
-                Plan your route simply by getting each analysis on the optimal
-                route and predict how your journey would be.
+                Plan your route simply by getting each analysis on the optimal route and predict how
+                your journey would be.
               </p>
             </div>
 

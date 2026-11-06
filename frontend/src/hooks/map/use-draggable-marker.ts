@@ -50,6 +50,11 @@ export function useDraggableMarker({
 
     if (!markerRef.current) {
       const el = createMarkerElement();
+      el.classList.toggle("is-draggable", draggable);
+      const isOrigin = el.classList.contains("origin-marker");
+      const label = isOrigin ? "Origin" : "Destination";
+      el.setAttribute("title", draggable ? `${label} (Drag to adjust)` : label);
+
       const marker = new Marker({
         element: el,
         draggable,
@@ -92,6 +97,12 @@ export function useDraggableMarker({
       markerRef.current = marker;
     } else {
       markerRef.current.setDraggable(draggable);
+      const el = markerRef.current.getElement();
+      el.classList.toggle("is-draggable", draggable);
+      const isOrigin = el.classList.contains("origin-marker");
+      const label = isOrigin ? "Origin" : "Destination";
+      el.setAttribute("title", draggable ? `${label} (Drag to adjust)` : label);
+
       const cur = markerRef.current.getLngLat();
       if (
         Math.abs(cur.lng - location.lng) > 0.00001 ||
